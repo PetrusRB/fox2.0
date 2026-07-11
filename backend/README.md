@@ -8,7 +8,7 @@ A backend desse projeto lindo e maravilhoso
 - Middleware (somente google)
 - Error handler dinâmica
 - GRPC (o tipo de API é GRPC)
-- Scriptzinha de build
+- Scriptzinha de build (root 'b.bat')
 - Sistema de likes
 - Sistema de posts (salvos em um vetor local, por em quanto não tem banco de dados)
 - Sistemas de comentarios
