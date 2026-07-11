@@ -1,0 +1,236 @@
+syntax = "proto3";
+
+package social;
+
+// --- SERVICES ---------------------------------------------
+service UserService {
+    rpc GetProfile (GetProfileRequest) returns (User);
+    rpc UpdateProfile (UpdateProfileRequest) returns (User);
+    rpc SearchUsers (SearchUsersRequest) returns (UserList);
+}
+
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResult);
+}
+
+service PostService {
+    rpc CreatePost (CreatePostRequest) returns (Post);
+    rpc GetPost (GetPostRequest) returns (Post);
+    rpc DeletePost (DeletePostRequest) returns (Empty);
+    rpc ListFeed (ListFeedRequest) returns (PostList);
+    rpc ListUserPosts (ListUserPostsRequest) returns (PostList);
+}
+
+service InteractionService {
+    rpc ToggleLike(ToggleLikeRequest) returns (ToggleLikeResult);
+    rpc AddComment (CommentRequest) returns (CommentItem);
+    rpc DeleteComment (DeleteCommentRequest) returns (Empty);
+    rpc ListLikes(ListLikesRequest) returns (ListLikesResult);
+    rpc ListComments (ListCommentsRequest) returns (CommentList);
+}
+
+service SocialService {
+    rpc ToggleFollow(ToggleFollowRequest) returns(ToggleFollowResult); 
+    rpc GetFollowers (GetFollowersRequest) returns (UserList);
+    rpc GetFollowing (GetFollowingRequest) returns (UserList);
+}
+
+service NotificationService {
+    rpc ListNotifications (ListNotificationsRequest) returns (NotificationList);
+    rpc MarkAsRead (MarkAsReadRequest) returns (Empty);
+    rpc WatchNotifications (WatchRequest) returns (stream Notification);
+}
+
+
+// --- MESSAGES ---------------------------------------------
+message User {
+    string id = 1;
+    string username = 2;
+    string handle = 3;
+    string display_name = 4;
+    string avatar = 5;
+    string bio = 6;
+    uint32 followers_count = 7;
+    uint32 following_count = 8;
+    uint32 posts_count = 9;
+    string created_at = 10;
+    bool is_following_me = 11;
+    bool is_followed_by_me = 12;
+}
+message Like {
+  string post_id = 1;
+  string user_id = 2;
+  string created_at = 3;
+}
+
+message Post {
+    string id = 1;
+    User author = 2;
+    string title = 3;
+    string content = 4;
+    string image_url = 5;
+    uint32 likes_count = 6;
+    uint32 comments_count = 7;
+    bool is_liked_by_me = 8;
+    string created_at = 9;
+}
+
+message CommentItem {
+    string id = 1;
+    User author = 2;
+    string post_id = 3;
+    string content = 4;
+    string created_at = 5;
+}
+
+message Notification {
+    string id = 1;
+    string type = 2;  // "like", "comment", "follow"
+    User from_user = 3;
+    string post_id = 4;
+    string message = 5;
+    bool is_read = 6;
+    string created_at = 7;
+}
+
+message UserList {
+    repeated User users = 1;
+}
+
+message PostList {
+    repeated Post posts = 1;
+}
+
+message CommentList {
+    repeated CommentItem comments = 1;
+}
+
+message NotificationList {
+    repeated Notification notifications = 1;
+}
+
+// --- REQUESTS ---------------------------------------------
+message LoginRequest {
+    string authorization_code = 1;
+    string redirect_uri = 2;
+}
+
+message GetProfileRequest {
+    string user_id = 1;
+}
+
+message UpdateProfileRequest {
+    string display_name = 1;
+    string bio = 2;
+    string avatar_url = 3;
+}
+
+message SearchUsersRequest {
+    string query = 1;
+    uint32 limit = 2;
+}
+
+message CreatePostRequest {
+  string title = 1;  
+  string content = 2;
+    string image_url = 3;
+}
+
+message GetPostRequest {
+    string post_id = 1;
+}
+
+message DeletePostRequest {
+    string post_id = 1;
+}
+
+message ListFeedRequest {
+    uint32 page = 1;
+    uint32 limit = 2;
+}
+
+message ListUserPostsRequest {
+    string user_id = 1;
+    uint32 page = 2;
+    uint32 limit = 3;
+}
+
+message CommentRequest {
+    string post_id = 1;
+    string content = 2;
+}
+
+message DeleteCommentRequest {
+    string comment_id = 1;
+}
+
+message ListCommentsRequest {
+    string post_id = 1;
+    uint32 page = 2;
+    uint32 limit = 3;
+}
+
+message ToggleFollowRequest {
+    string user_id = 1;
+}
+
+message GetFollowersRequest {
+    string user_id = 1;
+    uint32 page = 2;
+    uint32 limit = 3;
+}
+
+message GetFollowingRequest {
+    string user_id = 1;
+    uint32 page = 2;
+    uint32 limit = 3;
+}
+
+message ToggleLikeRequest {
+  string post_id = 1;
+}
+
+message ListLikesRequest {
+  string post_id = 1;
+  uint32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListNotificationsRequest {
+    uint32 page = 1;
+    uint32 limit = 2;
+}
+
+message MarkAsReadRequest {
+    string notification_id = 1;
+}
+
+message WatchRequest {}
+
+// --- RESULTS ---------------------------------------------
+message ListLikesResult {
+  repeated Like likes = 1;
+  string next_page_token = 2;
+}
+message ToggleFollowResult {
+  bool is_following = 1;
+  uint32 updated_followers_count = 2;
+}
+message ToggleLikeResult {
+  bool is_liked = 1;
+  uint32 updated_likes_count = 2;
+}
+
+message LoginResult {
+    string access_token = 1;
+    string refresh_token = 2;
+    uint32 expires_in = 3;
+    User user = 4;
+}
+
+message FollowResult {
+    string user_id = 1;
+    uint32 followers_count = 2;
+}
+
+message Empty {}

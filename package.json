@@ -1,0 +1,14 @@
+{
+  "name": "source",
+  "version": "1.0.0",
+  "author": "PetrusRB",
+  "description": "Uma Rede Social com foco no publico Gamer.",
+  "main": "index.js",
+  "scripts": {
+    "web": "cd frontend && pnpm dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0"
+}

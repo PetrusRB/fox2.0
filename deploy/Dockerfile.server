@@ -1,0 +1,23 @@
+FROM ubuntu:24.04 AS builder
+
+RUN apt-get update && apt-get install -y \
+    cmake ninja-build g++ \
+    libgrpc++-dev libprotobuf-dev protobuf-compiler-grpc \
+    protobuf-compiler abseil-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+RUN cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build \
+    && cmake --build build
+
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y \
+    libgrpc++1t64 libprotobuf23t64 libabsl20230802t64 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/build/server /usr/local/bin/server
+
+EXPOSE 50051
+CMD ["server"]

@@ -1,0 +1,341 @@
+// -- Variables --
+:root {
+  // Zinc
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+  --zinc-950: #09090b;
+
+  // Avocado Green
+  --avocado-50: #f7fee7;
+  --avocado-100: #ecfccb;
+  --avocado-200: #d9f99d;
+  --avocado-300: #bef264;
+  --avocado-400: #a3e635;
+  --avocado-500: #84cc16;
+  --avocado-600: #65a30d;
+  --avocado-700: #4d7c0f;
+  --avocado-800: #3f6212;
+  --avocado-900: #365314;
+
+  // Semantic
+  --bg-primary: var(--zinc-950);
+  --bg-surface: var(--zinc-900);
+  --bg-elevated: var(--zinc-800);
+  --border-color: var(--zinc-700);
+  --text-primary: var(--zinc-50);
+  --text-secondary: var(--zinc-400);
+  --text-muted: var(--zinc-500);
+  --accent: var(--avocado-600);
+  --accent-hover: var(--avocado-700);
+  --accent-bg: rgba(101, 163, 13, 0.1);
+
+  // Layout
+  --navbar-height: 52px;
+  --sidebar-width: 260px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family:
+    "Roboto",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--accent-hover);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--zinc-600);
+  border-radius: 3px;
+
+  &:hover {
+    background: var(--zinc-500);
+  }
+}
+
+// Firefox
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--zinc-600) transparent;
+}
+
+::selection {
+  background: rgba(101, 163, 13, 0.3);
+  color: var(--text-primary);
+}
+
+// -- Overrides --
+.q-page {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.q-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.q-btn {
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.q-input .q-field__control,
+.q-select .q-field__control {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.q-field--dark .q-field__control::before {
+  border-color: var(--border-color);
+}
+
+.q-menu {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.q-table {
+  background: var(--bg-surface);
+
+  th {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  td {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+
+  tbody tr:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.q-drawer {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+}
+
+.q-footer {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+}
+
+.q-list {
+  padding: 4px;
+}
+
+.q-item {
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: all 0.12s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+
+  &.q-item--active {
+    color: var(--accent);
+  }
+}
+
+.q-expansion-item .q-item {
+  min-height: 38px;
+}
+
+.q-tooltip {
+  background: var(--zinc-800);
+  color: var(--text-primary);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.q-banner {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.q-bar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.q-separator {
+  background: var(--border-color);
+}
+
+.q-fab {
+  background: var(--accent) !important;
+  color: var(--zinc-950) !important;
+}
+
+.q-fab__actions .q-btn {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color);
+}
+
+.q-dialog__inner > .q-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.q-linear-progress {
+  background: var(--zinc-700);
+}
+
+.q-circular-progress {
+  color: var(--accent);
+}
+
+.q-chip {
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.q-toggle__label {
+  color: var(--text-secondary);
+}
+
+.q-badge {
+  background: var(--accent);
+  color: var(--zinc-950);
+}
+
+.q-notification {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+// ── Utility Classes ────────────────────────────────────
+.text-accent {
+  color: var(--accent);
+}
+
+.bg-accent {
+  background: var(--accent);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.border-bottom {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.glass {
+  backdrop-filter: blur(12px);
+  background: rgba(24, 24, 27, 0.8);
+}
+
+// ── Drawer Items ──────────────────────────────────────
+.bg-zinc-900 {
+  background: var(--zinc-900);
+}
+
+.text-zinc-300 {
+  color: var(--zinc-300);
+}
+
+.text-zinc-500 {
+  color: var(--zinc-500);
+}
+
+.drawer-item {
+  color: var(--text-secondary);
+  min-height: 38px;
+  font-size: 13.5px;
+  transition: all 0.12s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+  }
+}
+
+.drawer-item--nested {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+// ── Section Labels (Drawer) ───────────────────────────
+.drawer-section {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 16px 8px 4px;
+}
+
+// ── Active States (Avocado accent) ────────────────────
+.bg-avocado-9 {
+  background: var(--accent-bg);
+}
+
+.text-avocado-5 {
+  color: var(--accent);
+}
