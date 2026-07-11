@@ -13,7 +13,7 @@ set "MSYS2=C:\msys64\mingw64\bin"
 set "PROTOC=%MSYS2%\protoc.exe"
 set "GRPC_PLUGIN=%MSYS2%\grpc_cpp_plugin.exe"
 set "PROTOC_GEN_TS=%ROOT%frontend\node_modules\.bin\protoc-gen-ts.cmd"
-set "GRPCWEBPROXY=%ROOT%proxy.exe"
+set "GRPCWEBPROXY=%ROOT%proxios.exe"
 set "DEPLOY=%ROOT%deploy"
 
 :: Parse args
@@ -93,9 +93,13 @@ if "%MODE%"=="gen" (
 echo [3/5] Configurando CMake...
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 cd /d "%BUILD_DIR%"
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "%BACKEND%"
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "%BACKEND%" > "%BUILD_DIR%\cmake.log" 2>&1
 if !errorlevel! neq 0 (
-    echo [ERRO] Falha no CMake.
+    echo [ERRO] Falha no CMake. Ultimas linhas do log:
+    echo ----------------------------------------
+    powershell -NoProfile -Command "Get-Content -Tail 40 '%BUILD_DIR%\cmake.log'"
+    echo ----------------------------------------
+    echo Log completo em: %BUILD_DIR%\cmake.log
     pause
     exit /b 1
 )
@@ -104,9 +108,13 @@ echo.
 
 :: 4. Build
 echo [4/5] Compilando...
-ninja
+ninja > "%BUILD_DIR%\build.log" 2>&1
 if !errorlevel! neq 0 (
-    echo [ERRO] Falha na compilacao.
+    echo [ERRO] Falha na compilacao. Ultimas linhas do log:
+    echo ----------------------------------------
+    powershell -NoProfile -Command "Get-Content -Tail 40 '%BUILD_DIR%\build.log'"
+    echo ----------------------------------------
+    echo Log completo em: %BUILD_DIR%\build.log
     pause
     exit /b 1
 )
@@ -132,9 +140,7 @@ goto :run
 :: =========================================================
 :proxy
 if not exist "%GRPCWEBPROXY%" (
-    echo [ERRO] grpcwebproxy.exe nao encontrado!
-    echo   Baixe de: https://github.com/improbable-eng/grpc-web/releases
-    echo   Salve como: %GRPCWEBPROXY%
+    echo [ERRO] proxios.exe nao encontrado!
     pause
     exit /b 1
 )
@@ -178,7 +184,7 @@ if not exist "%FRONTEND_GEN%" mkdir "%FRONTEND_GEN%"
 if exist "%PROTOC_GEN_TS%" (
     "%PROTOC%" --ts_out="%FRONTEND_GEN%" -I "%PROTO_DIR%" --plugin=protoc-gen-ts="%PROTOC_GEN_TS%" "%PROTO_DIR%\social.proto"
     if !errorlevel! neq 0 (
-        echo [ERRO] Falha ao gerar proto frontend.
+        echo [ERRO] Falha ao gerar proto frontend. rapaz, agora deu o carai mermo.
         pause
         exit /b 1
     )
@@ -192,9 +198,13 @@ echo.
 echo [3/5] Configurando CMake...
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
 cd /d "%BUILD_DIR%"
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "%BACKEND%"
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "%BACKEND%" > "%BUILD_DIR%\cmake.log" 2>&1
 if !errorlevel! neq 0 (
-    echo [ERRO] Falha no CMake.
+    echo [ERRO] Falha no CMake. se lasco rapaz, tomou no olho da jaca. Ultimas linhas do log:
+    echo ----------------------------------------
+    powershell -NoProfile -Command "Get-Content -Tail 40 '%BUILD_DIR%\cmake.log'"
+    echo ----------------------------------------
+    echo Log completo em: %BUILD_DIR%\cmake.log
     pause
     exit /b 1
 )
@@ -203,9 +213,13 @@ echo.
 
 :: 4. Build
 echo [4/5] Compilando...
-ninja
+ninja > "%BUILD_DIR%\build.log" 2>&1
 if !errorlevel! neq 0 (
-    echo [ERRO] Falha na compilacao. (tomou no olho da jaca)
+    echo [ERRO] Falha na compilacao. tomou no olho da jaca. Ultimas linhas do log:
+    echo ----------------------------------------
+    powershell -NoProfile -Command "Get-Content -Tail 40 '%BUILD_DIR%\build.log'"
+    echo ----------------------------------------
+    echo Log completo em: %BUILD_DIR%\build.log
     pause
     exit /b 1
 )
@@ -217,7 +231,7 @@ echo [5/5] Iniciando o binario do proxy + server...
 echo.
 
 echo [1/2] Iniciando binario do proxy na porta 8080...
-start "proxy" /min "%GRPCWEBPROXY%" --backend_addr=localhost:50051 --server_http_debug_port=8080 --allow_all_origins --run_tls_server=false
+start "proxios" /min "%GRPCWEBPROXY%" --backend_addr=localhost:50051 --server_http_debug_port=8080 --allow_all_origins --run_tls_server=false
 timeout /t 2 /nobreak >nul
 
 echo [2/2] Iniciando servidor gRPC na porta 50051...
@@ -225,7 +239,6 @@ echo.
 echo ========================================
 echo    Proxy:    http://localhost:8080
 echo    gRPC:     localhost:50051
-echo    Ctrl+C para parar
 echo ========================================
 echo.
 goto :run
@@ -248,3 +261,8 @@ exit /b 0
 :run
 cd /d "%ROOT%"
 "%BUILD_DIR%\server.exe"
+if !errorlevel! neq 0 (
+    echo.
+    echo [ERRO] Server encerrou com codigo: !errorlevel!
+)
+pause
