@@ -67,29 +67,29 @@ Fox 2.0 é uma aplicação full-stack com arquitetura cliente-servidor usando <b
 ## Arquitetura
 
 <pre style="background:#18181b; border:1px solid #3f3f46; border-radius:8px; padding:20px; color:#d4d4d8; font-size:13px; line-height:1.5; overflow-x:auto;">
-┌─────────────────────────────────────────────────────────────┐
-│                     <span style="color:#a3e635; font-weight:700;">Frontend (SPA)</span>                          │
-│   Vue 3 + Quasar 3 + TypeScript + protobuf-ts + Zod        │
-│                                                             │
-│   ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌────────┐ │
-│   │  <span style="color:#fafafa;">NavBar</span>    │  │ <span style="color:#fafafa;">SidePanel</span> │  │  <span style="color:#fafafa;">Posts</span>    │  │ <span style="color:#fafafa;">Auth</span>   │ │
-│   └───────────┘  └───────────┘  └───────────┘  └────────┘ │
-└─────────────────────────┬───────────────────────────────────┘
-                          │  <span style="color:#a3e635;">gRPC-Web (protobuf)</span>
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   <span style="color:#a3e635; font-weight:700;">Backend (C++17)</span>                           │
-│   gRPC Server + Protobuf + Abseil + libcurl                 │
-│                                                             │
-│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│   │ <span style="color:#fafafa;">AuthService</span>  │  │ <span style="color:#fafafa;">PostService</span> │  │ <span style="color:#fafafa;">UserService</span> │    │
-│   │ Login/OAuth  │  │ CRUD Posts   │  │  Profile     │    │
-│   └──────────────┘  └──────────────┘  └──────────────┘    │
-│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│   │ <span style="color:#fafafa;">Interaction</span> │  │ <span style="color:#fafafa;">Social</span>      │  │ <span style="color:#fafafa;">Notification</span>│    │
-│   │ Likes/Comms  │  │ Follow       │  │  Realtime    │    │
-│   └──────────────┘  └──────────────┘  └──────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                      <span style="color:#a3e635; font-weight:700;">Frontend (SPA)</span>                            │
+│   Vue 3 + Quasar 3 + TypeScript + protobuf-ts + Zod          │
+│                                                               │
+│   ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌─────────┐  │
+│   │  <span style="color:#fafafa;">NavBar</span>    │  │ <span style="color:#fafafa;">SidePanel</span> │  │  <span style="color:#fafafa;">Posts</span>    │  │  <span style="color:#fafafa;">Auth</span>  │  │
+│   └───────────┘  └───────────┘  └───────────┘  └─────────┘  │
+└───────────────────────────┬───────────────────────────────────┘
+                            │  <span style="color:#a3e635;">gRPC-Web (protobuf)</span>
+                            ▼
+┌───────────────────────────────────────────────────────────────┐
+│                     <span style="color:#a3e635; font-weight:700;">Backend (C++17)</span>                            │
+│   gRPC Server + Protobuf + Abseil + libcurl                   │
+│                                                               │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│   │ <span style="color:#fafafa;">AuthService</span>  │  │ <span style="color:#fafafa;">PostService</span> │  │ <span style="color:#fafafa;">UserService</span> │       │
+│   │ Login/OAuth  │  │ CRUD Posts   │  │  Profile     │       │
+│   └──────────────┘  └──────────────┘  └──────────────┘       │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│   │ <span style="color:#fafafa;">Interaction</span> │  │ <span style="color:#fafafa;">Social</span>      │  │ <span style="color:#fafafa;">Notification</span>│       │
+│   │ Likes/Comms  │  │ Follow       │  │  Realtime    │       │
+│   └──────────────┘  └──────────────┘  └──────────────┘       │
+└───────────────────────────────────────────────────────────────┘
 </pre>
 
 <br/>
