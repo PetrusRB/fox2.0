@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Fox-2.0-65a30d?style=for-the-badge&labelColor=09090b&color=65a30d" />
+<img src="https://img.shields.io/badge/Fox-v1.0-65a30d?style=for-the-badge&labelColor=09090b&color=65a30d" />
 
 <h1 style="color:#fafafa; font-size:2.4em; margin:8px 0 4px;">Fox 2.0</h1>
 
