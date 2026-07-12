@@ -1,4 +1,6 @@
 #include "authMiddle.h"
+#include "../server/server.h"
+#include "../utils/sanitize.h"
 
 #include <cstdlib>
 #include <curl/curl.h>
@@ -118,7 +120,7 @@ AuthMiddleware::ValidateGoogleToken(const std::string &access_token) {
   user.id = ExtractJsonString(response, "sub");
   user.email = ExtractJsonString(response, "email");
   user.name = ExtractJsonString(response, "given_name");
-  user.picture = ExtractJsonString(response, "picture");
+  user.picture = DecodeUnicodeEscapes(ExtractJsonString(response, "picture"));
 
   if (user.id.empty()) {
     return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
@@ -189,11 +191,70 @@ AuthMiddleware::ExchangeCodeForToken(const std::string &authorization_code,
   return {grpc::Status::OK, {access_token, refresh_token}};
 }
 
+std::pair<grpc::Status, std::string>
+AuthMiddleware::RefreshAccessToken(const std::string &refresh_token) {
+  const char *client_id = std::getenv("GOOGLE_CLIENT_ID");
+  const char *client_secret = std::getenv("GOOGLE_CLIENT_SECRET");
+
+  if (!client_id || !client_secret) {
+    return {grpc::Status(grpc::StatusCode::INTERNAL, "OAuth not configured"),
+            ""};
+  }
+
+  CURL *curl = curl_easy_init();
+  if (!curl) {
+    return {grpc::Status(grpc::StatusCode::INTERNAL,
+                         "Failed to initialize HTTP client"),
+            ""};
+  }
+
+  std::string post_fields =
+      "client_id=" + std::string(client_id) +
+      "&client_secret=" + std::string(client_secret) +
+      "&refresh_token=" + refresh_token + "&grant_type=refresh_token";
+
+  std::string response;
+
+  curl_easy_setopt(curl, CURLOPT_URL, "https://oauth2.googleapis.com/token");
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields.c_str());
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+  CURLcode res = curl_easy_perform(curl);
+  long http_code = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+  curl_easy_cleanup(curl);
+
+  if (res != CURLE_OK) {
+    return {grpc::Status(grpc::StatusCode::UNAVAILABLE,
+                         "Failed to refresh token"),
+            ""};
+  }
+
+  if (http_code != 200) {
+    std::string error = ExtractJsonString(response, "error_description");
+    if (error.empty())
+      error = "Failed to refresh access token";
+    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED, error), ""};
+  }
+
+  std::string access_token = ExtractJsonString(response, "access_token");
+
+  if (access_token.empty()) {
+    return {grpc::Status(grpc::StatusCode::INTERNAL, "Invalid token response"),
+            ""};
+  }
+
+  return {grpc::Status::OK, access_token};
+}
+
 AuthInterceptor::AuthInterceptor(grpc::experimental::ServerRpcInfo *info)
     : info_(info) {}
 
 bool AuthInterceptor::isPublicMethod(const std::string &method) const {
   return method.find("Login") != std::string::npos ||
+         method.find("RefreshAccessToken") != std::string::npos ||
          method.find("GetPost") != std::string::npos ||
          method.find("ListFeed") != std::string::npos ||
          method.find("ListUserPosts") != std::string::npos ||

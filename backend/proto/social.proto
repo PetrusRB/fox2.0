@@ -11,6 +11,7 @@ service UserService {
 
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResult);
+  rpc RefreshAccessToken(RefreshAccessTokenRequest) returns (LoginResult);
 }
 
 service PostService {
@@ -113,6 +114,10 @@ message NotificationList {
 message LoginRequest {
     string authorization_code = 1;
     string redirect_uri = 2;
+}
+
+message RefreshAccessTokenRequest {
+    string refresh_token = 1;
 }
 
 message GetProfileRequest {

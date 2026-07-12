@@ -191,9 +191,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
 
   &__empty {
     color: var(--text-secondary);

@@ -33,6 +33,7 @@ import type { GetPostRequest } from "./social";
 import type { Post } from "./social";
 import type { CreatePostRequest } from "./social";
 import { AuthService } from "./social";
+import type { RefreshAccessTokenRequest } from "./social";
 import type { LoginResult } from "./social";
 import type { LoginRequest } from "./social";
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
@@ -106,6 +107,10 @@ export interface IAuthServiceClient {
      * @generated from protobuf rpc: Login
      */
     login(input: LoginRequest, options?: RpcOptions): UnaryCall<LoginRequest, LoginResult>;
+    /**
+     * @generated from protobuf rpc: RefreshAccessToken
+     */
+    refreshAccessToken(input: RefreshAccessTokenRequest, options?: RpcOptions): UnaryCall<RefreshAccessTokenRequest, LoginResult>;
 }
 /**
  * @generated from protobuf service social.AuthService
@@ -122,6 +127,13 @@ export class AuthServiceClient implements IAuthServiceClient, ServiceInfo {
     login(input: LoginRequest, options?: RpcOptions): UnaryCall<LoginRequest, LoginResult> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
         return stackIntercept<LoginRequest, LoginResult>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: RefreshAccessToken
+     */
+    refreshAccessToken(input: RefreshAccessTokenRequest, options?: RpcOptions): UnaryCall<RefreshAccessTokenRequest, LoginResult> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<RefreshAccessTokenRequest, LoginResult>("unary", this._transport, method, opt, input);
     }
 }
 /**

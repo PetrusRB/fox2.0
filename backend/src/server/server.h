@@ -11,10 +11,9 @@
 #define MAX_TITLE_CHARS 256
 #define MAX_IMAGE_CHARS 2048
 
-namespace Crown {
+constexpr int REFRESH_EXPIRES = 3600;
 
-std::string SanitizeString(const std::string &input);
-std::string SanitizeUrl(const std::string &input);
+namespace Crown {
 
 class CrownServer : public social::PostService::Service,
                     public social::AuthService::Service,
@@ -45,6 +44,11 @@ public:
 
   grpc::Status Login(grpc::ServerContext *context,
                      const social::LoginRequest *request,
+                     social::LoginResult *response) override;
+
+  grpc::Status
+  RefreshAccessToken(grpc::ServerContext *context,
+                     const social::RefreshAccessTokenRequest *request,
                      social::LoginResult *response) override;
 
   grpc::Status GetProfile(grpc::ServerContext *context,

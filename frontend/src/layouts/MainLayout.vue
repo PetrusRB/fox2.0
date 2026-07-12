@@ -113,7 +113,7 @@ function toggleDrawer() {
       <div class="mobile-sidebar__header">
         <div class="mobile-sidebar__profile">
           <Avatar
-            :src="user?.avatar || '/placeholderpfp.png'"
+            :src="user?.avatar"
             size="lg"
             icon="person"
           />

@@ -1,20 +1,31 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 export interface AppAvatarProps {
   icon?: string;
   size?: "sm" | "md" | "lg";
-  src?: string;
+  src?: string | undefined;
 }
 
-withDefaults(defineProps<AppAvatarProps>(), {
+const props = withDefaults(defineProps<AppAvatarProps>(), {
   icon: "search",
   size: "md",
-  src: "/placeholderpfp.png",
+  src: "",
 });
+
+const PLACEHOLDER = "/placeholderpfp.png";
+const resolvedSrc = computed(() => props.src || PLACEHOLDER);
 </script>
 
 <template>
   <div class="app-avatar" :class="`app-avatar--${size}`">
-    <img v-if="src" :src="src" alt="Avatar" class="app-avatar__img" />
+    <img
+      v-if="resolvedSrc"
+      :src="resolvedSrc"
+      alt="Avatar"
+      class="app-avatar__img"
+      @error="($event.target as HTMLImageElement).src = PLACEHOLDER"
+    />
     <q-icon v-else :name="icon" />
   </div>
 </template>

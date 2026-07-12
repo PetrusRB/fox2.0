@@ -156,7 +156,7 @@ const isMobile = computed(() => $q.screen.lt.md);
           <BuTTon variant="icon" icon="notifications" :badge="3" />
 
           <!-- User Avatar -->
-          <Avatar :src="user?.avatar || '/placeholderpfp.png'" size="md" />
+          <Avatar :src="user?.avatar" size="md" />
         </div>
       </div>
     </div>

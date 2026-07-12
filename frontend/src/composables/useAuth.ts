@@ -4,13 +4,16 @@ import {
   getGoogleOAuthUrl,
   clearAccessToken,
   hasAccessToken,
+  refreshAccessToken,
   setCookie,
   getCookie,
   deleteCookie,
   getProfile,
 } from "./useSocialClient";
 import { parseGrpcError, type AppError } from "./errors";
+import { RpcError } from "@protobuf-ts/runtime-rpc";
 import type { User as GrpcUser } from "@/proto/social";
+import { decodeUnicodeEscapes } from "./sanitize";
 
 export interface User {
   id: string;
@@ -36,13 +39,14 @@ function mapGrpcUser(grpcUser: GrpcUser): User {
     followers: grpcUser.followersCount || 0,
     following: grpcUser.followingCount || 0,
     email: grpcUser.id,
-    avatar: grpcUser.avatar || "/placeholderpfp.png",
+    avatar: decodeUnicodeEscapes(grpcUser.avatar || "/placeholderpfp.png"),
   };
 }
 
 function saveUser(u: User) {
   localStorage.setItem("auth_user", JSON.stringify(u));
   setCookie("auth_user", JSON.stringify(u), 30);
+  setCookie("auth_user_id", u.id, 30);
 }
 
 function loadUser(): User | null {
@@ -58,6 +62,7 @@ function loadUser(): User | null {
 function clearUser() {
   localStorage.removeItem("auth_user");
   deleteCookie("auth_user");
+  deleteCookie("auth_user_id");
 }
 
 export function useAuth() {
@@ -67,18 +72,48 @@ export function useAuth() {
     if (!hasAccessToken()) return false;
 
     const saved = loadUser();
-    if (!saved) return false;
-    user.value = saved;
+    const userId = saved?.id || getCookie("auth_user_id");
+
+    if (saved) {
+      user.value = saved;
+    }
+
+    if (!userId) return false;
 
     try {
-      const fresh = await getProfile(saved.id);
+      const fresh = await getProfile(userId);
       if (fresh.displayName || fresh.username) {
         const updated = mapGrpcUser(fresh);
         user.value = updated;
         saveUser(updated);
       }
-    } catch {
-      // mantem o user cacheado (cabelos cacheados)
+    } catch (e) {
+      if (e instanceof RpcError && e.code === "UNAUTHENTICATED") {
+        console.log(
+          "Piece of shitos, is trying to do refresh token. But is not working, look a that :D",
+        );
+        const ok = await refreshAccessToken();
+        if (ok) {
+          console.log(
+            "Misericordia, funcionou o bem dito refresh token. YEAAAAAAAH!!!!!!!",
+          );
+          try {
+            const fresh = await getProfile(userId);
+            if (fresh.displayName || fresh.username) {
+              const updated = mapGrpcUser(fresh);
+              user.value = updated;
+              saveUser(updated);
+            }
+          } catch {
+            if (!user.value) return false;
+          }
+        } else {
+          user.value = null;
+          return false;
+        }
+      } else {
+        if (!user.value) return false;
+      }
     }
 
     return true;

@@ -28,6 +28,9 @@ public:
   ExchangeCodeForToken(const std::string &authorization_code,
                        const std::string &redirect_uri);
 
+  static std::pair<grpc::Status, std::string>
+  RefreshAccessToken(const std::string &refresh_token);
+
 private:
   static std::unordered_map<grpc::ServerContext *, AuthenticatedUser> users_;
   static std::mutex mutex_;

@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(gRPC REQUIRED)
 find_package(absl REQUIRED)
 find_package(CURL REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
 find_program(PROTOC_EXECUTABLE protoc REQUIRED)
 find_program(GRPC_CPP_PLUGIN_EXECUTABLE NAMES grpc_cpp_plugin grpc_cpp_plugin.exe REQUIRED)
 
@@ -62,15 +64,19 @@ target_include_directories(server PRIVATE
     ${GEN_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    fmt::fmt
 )
 
 target_link_libraries(server
     gRPC::grpc++
     protobuf::libprotobuf
     absl::strings
+    absl::time
     absl::flags
     absl::flags_parse
     absl::log
     absl::log_initialize
     CURL::libcurl
-)
+    fmt
+    PkgConfig::LIBXML2
+  )

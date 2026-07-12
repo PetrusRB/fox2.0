@@ -234,6 +234,15 @@ export interface LoginRequest {
     redirectUri: string;
 }
 /**
+ * @generated from protobuf message social.RefreshAccessTokenRequest
+ */
+export interface RefreshAccessTokenRequest {
+    /**
+     * @generated from protobuf field: string refresh_token = 1
+     */
+    refreshToken: string;
+}
+/**
  * @generated from protobuf message social.GetProfileRequest
  */
 export interface GetProfileRequest {
@@ -1275,6 +1284,53 @@ class LoginRequest$Type extends MessageType<LoginRequest> {
  * @generated MessageType for protobuf message social.LoginRequest
  */
 export const LoginRequest = new LoginRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RefreshAccessTokenRequest$Type extends MessageType<RefreshAccessTokenRequest> {
+    constructor() {
+        super("social.RefreshAccessTokenRequest", [
+            { no: 1, name: "refresh_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RefreshAccessTokenRequest>): RefreshAccessTokenRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.refreshToken = "";
+        if (value !== undefined)
+            reflectionMergePartial<RefreshAccessTokenRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RefreshAccessTokenRequest): RefreshAccessTokenRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string refresh_token */ 1:
+                    message.refreshToken = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RefreshAccessTokenRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string refresh_token = 1; */
+        if (message.refreshToken !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.refreshToken);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message social.RefreshAccessTokenRequest
+ */
+export const RefreshAccessTokenRequest = new RefreshAccessTokenRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GetProfileRequest$Type extends MessageType<GetProfileRequest> {
     constructor() {
@@ -2643,7 +2699,8 @@ export const UserService = new ServiceType("social.UserService", [
  * @generated ServiceType for protobuf service social.AuthService
  */
 export const AuthService = new ServiceType("social.AuthService", [
-    { name: "Login", options: {}, I: LoginRequest, O: LoginResult }
+    { name: "Login", options: {}, I: LoginRequest, O: LoginResult },
+    { name: "RefreshAccessToken", options: {}, I: RefreshAccessTokenRequest, O: LoginResult }
 ]);
 /**
  * @generated ServiceType for protobuf service social.PostService

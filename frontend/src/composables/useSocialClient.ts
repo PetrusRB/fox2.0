@@ -1,4 +1,5 @@
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport";
+import { RpcError } from "@protobuf-ts/runtime-rpc";
 import {
   PostServiceClient,
   InteractionServiceClient,
@@ -34,7 +35,10 @@ export function deleteCookie(name: string) {
 // --------------------- Transport e clients ---------------------
 function getTransport(): GrpcWebFetchTransport {
   if (!transport) {
-    transport = new GrpcWebFetchTransport({ baseUrl: HOST });
+    transport = new GrpcWebFetchTransport({
+      baseUrl: HOST,
+      fetchInit: { credentials: "include" },
+    });
   }
   return transport;
 }
@@ -111,6 +115,53 @@ export function getGoogleOAuthUrl(): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
+// --------------------- Token Refresh ---------------------
+let refreshPromise: Promise<boolean> | null = null;
+
+export async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = getCookie("refresh_token");
+  if (!refreshToken) return false;
+
+  try {
+    const client = getAuthClient();
+    const { response } = await client.refreshAccessToken({
+      refreshToken,
+    });
+
+    if (response.accessToken) {
+      setCookie("access_token", response.accessToken, 1);
+      return true;
+    }
+    return false;
+  } catch {
+    clearAccessToken();
+    return false;
+  }
+}
+
+async function handleUnauthenticated<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (!(error instanceof RpcError) || error.code !== "UNAUTHENTICATED") {
+      throw error;
+    }
+
+    if (!refreshPromise) {
+      refreshPromise = refreshAccessToken().finally(() => {
+        refreshPromise = null;
+      });
+    }
+
+    const ok = await refreshPromise;
+    if (!ok) {
+      throw error;
+    }
+
+    return fn();
+  }
+}
+
 // --------------------- Posts ---------------------
 export async function createPost(
   title: string,
@@ -126,30 +177,55 @@ export async function createPost(
     throw new Error(validation.error.message);
   }
 
-  const client = getPostClient();
-  const { response } = await client.createPost({
-    title: clean.title,
-    content: clean.content,
-    imageUrl: clean.imageUrl,
+  return handleUnauthenticated(async () => {
+    const client = getPostClient();
+    const { response } = await client.createPost({
+      title: clean.title,
+      content: clean.content,
+      imageUrl: clean.imageUrl,
+    });
+    return response;
   });
-  return response;
+}
+
+function decodeUrl(url: string): string {
+  if (!url) return url;
+  return url.replace(/(\\|\/)u([0-9a-fA-F]{4})/g, (_, _prefix, hex) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+}
+
+function decodePostUrls(post: Post): Post {
+  let decoded = post;
+  if (post.imageUrl) {
+    decoded = { ...decoded, imageUrl: decodeUrl(post.imageUrl) };
+  }
+  if (decoded.author?.avatar) {
+    decoded = {
+      ...decoded,
+      author: { ...decoded.author, avatar: decodeUrl(decoded.author.avatar) },
+    };
+  }
+  return decoded;
 }
 
 export async function getPost(postId: string): Promise<Post> {
   const client = getPostClient();
   const { response } = await client.getPost({ postId });
-  return response;
+  return decodePostUrls(response);
 }
 
 export async function deletePost(postId: string): Promise<void> {
-  const client = getPostClient();
-  await client.deletePost({ postId });
+  return handleUnauthenticated(async () => {
+    const client = getPostClient();
+    await client.deletePost({ postId });
+  });
 }
 
 export async function listFeed(page = 1, limit = 20): Promise<Post[]> {
   const client = getPostClient();
   const { response } = await client.listFeed({ page, limit });
-  return response.posts;
+  return response.posts.map(decodePostUrls);
 }
 
 export async function listUserPosts(
@@ -159,16 +235,18 @@ export async function listUserPosts(
 ): Promise<Post[]> {
   const client = getPostClient();
   const { response } = await client.listUserPosts({ userId, page, limit });
-  return response.posts;
+  return response.posts.map(decodePostUrls);
 }
 
 // --------------------- Interações ---------------------
 export async function toggleLikePost(
   postId: string,
 ): Promise<ToggleLikeResult> {
-  const client = getInteractionClient();
-  const { response } = await client.toggleLike({ postId });
-  return response;
+  return handleUnauthenticated(async () => {
+    const client = getInteractionClient();
+    const { response } = await client.toggleLike({ postId });
+    return response;
+  });
 }
 
 export async function addComment(
@@ -178,12 +256,14 @@ export async function addComment(
   const { sanitizeString } = await import("./sanitize");
   const cleanContent = sanitizeString(content, MAX_CONTENT_CHARS);
 
-  const client = getInteractionClient();
-  const { response } = await client.addComment({
-    postId,
-    content: cleanContent,
+  return handleUnauthenticated(async () => {
+    const client = getInteractionClient();
+    const { response } = await client.addComment({
+      postId,
+      content: cleanContent,
+    });
+    return response;
   });
-  return response;
 }
 
 export async function listComments(

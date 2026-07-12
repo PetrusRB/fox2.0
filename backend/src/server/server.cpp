@@ -1,75 +1,18 @@
 #include "server.h"
 
 #include "../middlewares/authMiddle.h"
+#include "../utils/sanitize.h"
 #include <absl/strings/str_format.h>
+#include <absl/time/time.h>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <format>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/status.h>
 #include <iostream>
 
 namespace Crown {
-
-std::string SanitizeString(const std::string &input) {
-  std::string result;
-  result.reserve(input.size());
-  bool in_tag = false;
-
-  for (size_t i = 0; i < input.size(); ++i) {
-    char c = input[i];
-
-    if (c == '<') {
-      in_tag = true;
-      continue;
-    }
-    if (c == '>') {
-      in_tag = false;
-      continue;
-    }
-    if (in_tag) {
-      continue;
-    }
-
-    // Bloqueia eventos começando com 'on'
-    if (c == 'o' || c == 'O') {
-      std::string lower_input = input.substr(i);
-      std::transform(lower_input.begin(),
-                     lower_input.begin() +
-                         std::min(lower_input.size(), (size_t)10),
-                     lower_input.begin(), ::tolower);
-      if (lower_input.substr(0, 3) == "on" && i + 3 < input.size()) {
-        char next = std::tolower(input[i + 2]);
-        if (next == '=' || next == ' ' || next == '(') {
-          continue;
-        }
-      }
-    }
-
-    result += c;
-  }
-
-  return result;
-}
-
-std::string SanitizeUrl(const std::string &input) {
-  std::string trimmed = input;
-  // Remove espaços chatonildos
-  auto start = trimmed.find_first_not_of(" \t\n\r");
-  if (start == std::string::npos)
-    return "";
-  auto end = trimmed.find_last_not_of(" \t\n\r");
-  trimmed = trimmed.substr(start, end - start + 1);
-
-  // Bloqueia o javascript fi de rapariga + dados
-  std::string lower = trimmed;
-  std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-  if (lower.rfind("javascript:", 0) == 0)
-    return "";
-  if (lower.rfind("data:", 0) == 0)
-    return "";
-
-  return trimmed;
-}
 
 grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
                                      const social::CreatePostRequest *request,
@@ -116,7 +59,12 @@ grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
   if (!clean_image.empty()) {
     post.set_image_url(clean_image);
   }
+  auto now = std::chrono::system_clock::now();
+  std::string time = absl::FormatTime(
+      "%Y-%m-%dT%H:%M:%SZ", absl::FromChrono(now), absl::UTCTimeZone());
+
   post.set_likes_count(0);
+  post.set_created_at(time);
   post.set_comments_count(0);
   post.set_is_liked_by_me(false);
 
@@ -314,7 +262,7 @@ grpc::Status CrownServer::Login(grpc::ServerContext *context,
 
   response->set_access_token(tokens.first);
   response->set_refresh_token(tokens.second);
-  response->set_expires_in(3600);
+  response->set_expires_in(REFRESH_EXPIRES);
 
   social::User source;
   source.set_id(user.id);
@@ -332,6 +280,29 @@ grpc::Status CrownServer::Login(grpc::ServerContext *context,
   stored->set_posts_count(post_count);
 
   *response->mutable_user() = *stored;
+
+  return grpc::Status::OK;
+}
+
+grpc::Status CrownServer::RefreshAccessToken(
+    grpc::ServerContext *context,
+    const social::RefreshAccessTokenRequest *request,
+    social::LoginResult *response) {
+
+  if (request->refresh_token().empty()) {
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                        "Refresh token is required");
+  }
+
+  auto [status, new_access_token] =
+      AuthMiddleware::RefreshAccessToken(request->refresh_token());
+
+  if (!status.ok()) {
+    return status;
+  }
+
+  response->set_access_token(new_access_token);
+  response->set_expires_in(REFRESH_EXPIRES);
 
   return grpc::Status::OK;
 }

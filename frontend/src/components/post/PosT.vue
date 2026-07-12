@@ -64,13 +64,20 @@ const initials = computed(() => {
         v-if="post.imageUrl"
         :src="post.imageUrl"
         alt="Post image"
+        loading="lazy"
         class="post-card__image"
       />
     </div>
 
     <div class="post-card__footer">
-      <button class="post-card__action" :class="{ 'post-card__action--liked': post.isLikedByMe }">
-        <q-icon :name="post.isLikedByMe ? 'favorite' : 'favorite_border'" size="18px" />
+      <button
+        class="post-card__action"
+        :class="{ 'post-card__action--liked': post.isLikedByMe }"
+      >
+        <q-icon
+          :name="post.isLikedByMe ? 'favorite' : 'favorite_border'"
+          size="18px"
+        />
         <span>{{ post.likesCount }}</span>
       </button>
       <button class="post-card__action">

@@ -15,7 +15,7 @@ withDefaults(defineProps<UserCardProps>(), {
 
 <template>
   <div class="user-card" :class="{ 'user-card--collapsed': collapsed }">
-    <Avatar :src="user?.avatar || '/placeholderpfp.png'" size="lg" />
+    <Avatar :src="user?.avatar" size="lg" />
     <div v-if="!collapsed" class="user-card__info">
       <span class="user-card__name">{{ user?.name }}</span>
       <span v-if="user?.handle" class="user-card__handle"
