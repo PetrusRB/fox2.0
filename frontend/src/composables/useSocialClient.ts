@@ -223,9 +223,11 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 export async function listFeed(page = 1, limit = 20): Promise<Post[]> {
-  const client = getPostClient();
-  const { response } = await client.listFeed({ page, limit });
-  return response.posts.map(decodePostUrls);
+  return handleUnauthenticated(async () => {
+    const client = getPostClient();
+    const { response } = await client.listFeed({ page, limit });
+    return response.posts.map(decodePostUrls);
+  });
 }
 
 export async function listUserPosts(
@@ -233,9 +235,11 @@ export async function listUserPosts(
   page = 1,
   limit = 20,
 ): Promise<Post[]> {
-  const client = getPostClient();
-  const { response } = await client.listUserPosts({ userId, page, limit });
-  return response.posts.map(decodePostUrls);
+  return handleUnauthenticated(async () => {
+    const client = getPostClient();
+    const { response } = await client.listUserPosts({ userId, page, limit });
+    return response.posts.map(decodePostUrls);
+  });
 }
 
 // --------------------- Interações ---------------------

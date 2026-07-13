@@ -94,12 +94,22 @@ grpc::Status CrownServer::GetPost(grpc::ServerContext *context,
                                   social::Post *response) {
 
   auto it = post_index_.find(request->post_id());
-  if (it != post_index_.end()) {
-    *response = posts_[it->second];
-    return grpc::Status::OK;
+  if (it == post_index_.end()) {
+    return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post nao encontrado");
   }
 
-  return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post nao encontrado");
+  *response = posts_[it->second];
+
+  auto user = AuthMiddleware::GetUser(context);
+  if (user) {
+    auto userLikes = likes_.find(user->id);
+    if (userLikes != likes_.end()) {
+      response->set_is_liked_by_me(userLikes->second.count(request->post_id()) >
+                                   0);
+    }
+  }
+
+  return grpc::Status::OK;
 }
 
 grpc::Status CrownServer::DeletePost(grpc::ServerContext *context,
@@ -155,8 +165,18 @@ grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
   int end = total - static_cast<int>((page - 1) * limit);
   int begin = std::max(0, end - static_cast<int>(limit));
 
+  auto user = AuthMiddleware::GetUser(context);
+  std::string userId = user ? user->id : "";
+
   for (int i = end - 1; i >= begin; --i) {
-    *response->add_posts() = posts_[i];
+    auto *post = response->add_posts();
+    *post = posts_[i];
+    if (!userId.empty()) {
+      auto it = likes_.find(userId);
+      if (it != likes_.end()) {
+        post->set_is_liked_by_me(it->second.count(posts_[i].id()) > 0);
+      }
+    }
   }
 
   return grpc::Status::OK;
@@ -174,11 +194,21 @@ CrownServer::ListUserPosts(grpc::ServerContext *context,
   int end = total - static_cast<int>((page - 1) * limit);
   int begin = std::max(0, end - static_cast<int>(limit));
 
+  auto user = AuthMiddleware::GetUser(context);
+  std::string userId = user ? user->id : "";
+
   for (int i = end - 1; i >= begin; --i) {
     if (posts_[i].author().id() != request->user_id()) {
       continue;
     }
-    *response->add_posts() = posts_[i];
+    auto *post = response->add_posts();
+    *post = posts_[i];
+    if (!userId.empty()) {
+      auto it = likes_.find(userId);
+      if (it != likes_.end()) {
+        post->set_is_liked_by_me(it->second.count(posts_[i].id()) > 0);
+      }
+    }
   }
 
   return grpc::Status::OK;

@@ -8,6 +8,39 @@ import { MAX_PAGE_FEED, MIN_PAGE_FEED } from "@/config/config";
 import type { Post } from "@/proto/social";
 import { defineStore, acceptHMRUpdate } from "pinia";
 
+function toPlain(post: Post): Post {
+  const base = {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    imageUrl: post.imageUrl,
+    likesCount: post.likesCount,
+    commentsCount: post.commentsCount,
+    isLikedByMe: post.isLikedByMe,
+    createdAt: post.createdAt,
+  };
+
+  if (!post.author) return base;
+
+  return {
+    ...base,
+    author: {
+      id: post.author.id,
+      username: post.author.username,
+      handle: post.author.handle,
+      displayName: post.author.displayName,
+      avatar: post.author.avatar,
+      bio: post.author.bio,
+      followersCount: post.author.followersCount,
+      followingCount: post.author.followingCount,
+      postsCount: post.author.postsCount,
+      createdAt: post.author.createdAt,
+      isFollowingMe: post.author.isFollowingMe,
+      isFollowedByMe: post.author.isFollowedByMe,
+    },
+  };
+}
+
 interface PostState {
   posts: Post[];
   selectedPost: Post | null;
@@ -17,6 +50,8 @@ interface PostState {
   error: string | null;
   page: number;
   hasMore: boolean;
+  _likeVersions: Map<string, number>;
+  _pendingLikes: Set<string>;
 }
 
 export const usePostStore = defineStore("post", {
@@ -29,6 +64,8 @@ export const usePostStore = defineStore("post", {
     error: null,
     page: 1,
     hasMore: true,
+    _likeVersions: new Map(),
+    _pendingLikes: new Set(),
   }),
 
   getters: {
@@ -48,7 +85,7 @@ export const usePostStore = defineStore("post", {
       this.error = null;
       try {
         const posts = await listFeed(MIN_PAGE_FEED, MAX_PAGE_FEED);
-        this.posts = posts;
+        this.posts = posts.map(toPlain);
         this.page = 1;
         this.hasMore = posts.length === 20;
       } catch (err) {
@@ -64,7 +101,7 @@ export const usePostStore = defineStore("post", {
       try {
         const nextPage = this.page + 1;
         const posts = await listFeed(nextPage, 20);
-        this.posts.push(...posts);
+        this.posts.push(...posts.map(toPlain));
         this.page = nextPage;
         this.hasMore = posts.length === 20;
       } catch (err) {
@@ -83,7 +120,7 @@ export const usePostStore = defineStore("post", {
           post.content,
           post.imageUrl,
         );
-        this.posts.unshift(created);
+        this.posts.unshift(toPlain(created));
         return created;
       } catch (err) {
         this.error = `Falha ao criar post: ${err}`;
@@ -115,17 +152,32 @@ export const usePostStore = defineStore("post", {
       const post = this.posts.find((p) => p.id === id);
       if (!post) return;
 
-      const prevLiked = post.isLikedByMe;
-      const prevCount = post.likesCount;
+      if (this._pendingLikes.has(id)) return;
 
-      post.isLikedByMe = !prevLiked;
-      post.likesCount = prevLiked ? prevCount - 1 : prevCount + 1;
+      const version = (this._likeVersions.get(id) ?? 0) + 1;
+      this._likeVersions.set(id, version);
+
+      const prev = { liked: post.isLikedByMe, count: post.likesCount };
+
+      post.isLikedByMe = !prev.liked;
+      post.likesCount += prev.liked ? -1 : 1;
+
+      this._pendingLikes.add(id);
 
       try {
-        await toggleLikePost(id);
+        const result = await toggleLikePost(id);
+
+        if (this._likeVersions.get(id) === version) {
+          post.isLikedByMe = result.isLiked;
+          post.likesCount = result.updatedLikesCount;
+        }
       } catch {
-        post.isLikedByMe = prevLiked;
-        post.likesCount = prevCount;
+        if (this._likeVersions.get(id) === version) {
+          post.isLikedByMe = prev.liked;
+          post.likesCount = prev.count;
+        }
+      } finally {
+        this._pendingLikes.delete(id);
       }
     },
 
