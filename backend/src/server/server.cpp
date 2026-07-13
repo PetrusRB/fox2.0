@@ -198,6 +198,10 @@ CrownServer::ListUserPosts(grpc::ServerContext *context,
   int begin = std::max(0, end - static_cast<int>(limit));
 
   auto user = AuthMiddleware::GetUser(context);
+  if (!user) {
+    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
+  }
+
   std::string userId = user ? user->id : "";
 
   for (int i = end - 1; i >= begin; --i) {
