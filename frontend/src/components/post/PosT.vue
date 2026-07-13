@@ -1,10 +1,33 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { Post } from "@/types/post.type";
+import { Post } from "@/proto/social";
+import DropDown, { type DropDownItem } from "../ui/DropDown.vue";
+import { usePostStore } from "@/stores/post-store";
 
 const props = defineProps<{
   post: Post;
 }>();
+
+const postStore = usePostStore();
+
+const menuItems: DropDownItem[] = [
+  { key: "copyLink", label: "Copiar link", icon: "link" },
+  { key: "divider", label: "", divider: true },
+  { key: "delete", label: "Excluir post", icon: "delete", danger: true },
+];
+
+function handleMenuSelect(item: DropDownItem) {
+  switch (item.key) {
+    case "delete":
+      postStore.removePost(props.post.id);
+      break;
+    case "copyLink":
+      navigator.clipboard.writeText(
+        `${window.location.origin}/post/${props.post.id}`,
+      );
+      break;
+  }
+}
 
 const formattedDate = computed(() => {
   const date = new Date(props.post.createdAt);
@@ -37,8 +60,8 @@ const initials = computed(() => {
     <div class="post-card__header">
       <div class="post-card__avatar">
         <img
-          v-if="post.author?.avatarUrl"
-          :src="post.author.avatarUrl"
+          v-if="post.author?.avatar"
+          :src="post.author.avatar"
           :alt="post.author.displayName"
         />
         <span v-else>{{ initials }}</span>
@@ -52,9 +75,11 @@ const initials = computed(() => {
         >
       </div>
       <span class="post-card__time">{{ formattedDate }}</span>
-      <button class="post-card__menu">
-        <q-icon name="more_vert" size="18px" />
-      </button>
+      <DropDown
+        :items="menuItems"
+        placement="right"
+        @select="handleMenuSelect"
+      />
     </div>
 
     <div class="post-card__body">
@@ -73,6 +98,7 @@ const initials = computed(() => {
       <button
         class="post-card__action"
         :class="{ 'post-card__action--liked': post.isLikedByMe }"
+        @click="postStore.toggleLike(post.id)"
       >
         <q-icon
           :name="post.isLikedByMe ? 'favorite' : 'favorite_border'"
@@ -156,25 +182,6 @@ const initials = computed(() => {
   &__time {
     font-size: 12px;
     color: var(--text-muted);
-  }
-
-  &__menu {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: transparent;
-    border: none;
-    border-radius: 50%;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-    }
   }
 
   &__body {

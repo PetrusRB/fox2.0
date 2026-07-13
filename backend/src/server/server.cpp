@@ -81,6 +81,7 @@ grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
   *author = *stored;
 
   posts_.push_back(post);
+  post_index_[post.id()] = posts_.size() - 1;
 
   *response = post;
 
@@ -92,11 +93,10 @@ grpc::Status CrownServer::GetPost(grpc::ServerContext *context,
                                   const social::GetPostRequest *request,
                                   social::Post *response) {
 
-  for (const auto &post : posts_) {
-    if (post.id() == request->post_id()) {
-      *response = post;
-      return grpc::Status::OK;
-    }
+  auto it = post_index_.find(request->post_id());
+  if (it != post_index_.end()) {
+    *response = posts_[it->second];
+    return grpc::Status::OK;
   }
 
   return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post nao encontrado");
@@ -116,19 +116,28 @@ grpc::Status CrownServer::DeletePost(grpc::ServerContext *context,
                         "Post ID is required");
   }
 
-  for (auto it = posts_.begin(); it != posts_.end(); ++it) {
-    if (it->id() == request->post_id()) {
-      if (it->author().id() != user->id) {
-        return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
-                            "Not authorized to delete this post");
-      }
-      std::cout << "Post removido: [" << it->id() << "]\n";
-      posts_.erase(it);
-      return grpc::Status::OK;
-    }
+  auto it = post_index_.find(request->post_id());
+  if (it == post_index_.end()) {
+    return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post nao encontrado");
   }
 
-  return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post nao encontrado");
+  auto &post = posts_[it->second];
+  if (post.author().id() != user->id) {
+    return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
+                        "Not authorized to delete this post");
+  }
+
+  std::cout << "Post removido: [" << post.id() << "]\n";
+  posts_.erase(posts_.begin() + it->second);
+  post_index_.erase(it);
+
+  // Rebuild index after erase
+  post_index_.clear();
+  for (size_t i = 0; i < posts_.size(); ++i) {
+    post_index_[posts_[i].id()] = i;
+  }
+
+  return grpc::Status::OK;
 }
 
 grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
@@ -137,15 +146,17 @@ grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
 
   uint32_t page = request->page() > 0 ? request->page() : 1;
   uint32_t limit = request->limit() > 0 ? request->limit() : 20;
-  uint32_t start = (page - 1) * limit;
 
-  int count = 0;
-  for (int i = posts_.size() - 1; i >= 0 && count < static_cast<int>(limit);
-       --i) {
-    if (static_cast<uint32_t>(count) >= start) {
-      *response->add_posts() = posts_[i];
-      count++;
-    }
+  if (posts_.empty()) {
+    return grpc::Status::OK;
+  }
+
+  int total = static_cast<int>(posts_.size());
+  int end = total - static_cast<int>((page - 1) * limit);
+  int begin = std::max(0, end - static_cast<int>(limit));
+
+  for (int i = end - 1; i >= begin; --i) {
+    *response->add_posts() = posts_[i];
   }
 
   return grpc::Status::OK;
@@ -158,17 +169,16 @@ CrownServer::ListUserPosts(grpc::ServerContext *context,
 
   uint32_t page = request->page() > 0 ? request->page() : 1;
   uint32_t limit = request->limit() > 0 ? request->limit() : 20;
-  uint32_t start = (page - 1) * limit;
 
-  int count = 0;
-  for (int i = posts_.size() - 1; i >= 0; --i) {
-    if (posts_[i].author().id() == request->user_id()) {
-      if (static_cast<uint32_t>(count) >= start &&
-          count < static_cast<int>(limit)) {
-        *response->add_posts() = posts_[i];
-      }
-      count++;
+  int total = static_cast<int>(posts_.size());
+  int end = total - static_cast<int>((page - 1) * limit);
+  int begin = std::max(0, end - static_cast<int>(limit));
+
+  for (int i = end - 1; i >= begin; --i) {
+    if (posts_[i].author().id() != request->user_id()) {
+      continue;
     }
+    *response->add_posts() = posts_[i];
   }
 
   return grpc::Status::OK;
@@ -232,6 +242,42 @@ grpc::Status CrownServer::GetProfile(grpc::ServerContext *context,
   }
 
   return grpc::Status(grpc::StatusCode::NOT_FOUND, "User not found");
+}
+
+grpc::Status CrownServer::ToggleLike(grpc::ServerContext *context,
+                                     const social::ToggleLikeRequest *request,
+                                     social::ToggleLikeResult *response) {
+
+  auto user = AuthMiddleware::GetUser(context);
+  if (!user) {
+    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
+  }
+
+  if (request->post_id().empty()) {
+    return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                        "Post ID is required");
+  }
+
+  auto it = post_index_.find(request->post_id());
+  if (it == post_index_.end()) {
+    return grpc::Status(grpc::StatusCode::NOT_FOUND, "Post not found");
+  }
+
+  auto &post = posts_[it->second];
+  auto &user_likes = likes_[user->id];
+
+  if (user_likes.count(post.id())) {
+    user_likes.erase(post.id());
+    post.set_likes_count(post.likes_count() - 1);
+    response->set_is_liked(false);
+  } else {
+    user_likes.insert(post.id());
+    post.set_likes_count(post.likes_count() + 1);
+    response->set_is_liked(true);
+  }
+
+  response->set_updated_likes_count(post.likes_count());
+  return grpc::Status::OK;
 }
 
 grpc::Status CrownServer::Login(grpc::ServerContext *context,
@@ -317,6 +363,8 @@ bool CrownServer::init(uint16_t port) {
   builder.RegisterService(static_cast<social::PostService::Service *>(this));
   builder.RegisterService(static_cast<social::AuthService::Service *>(this));
   builder.RegisterService(static_cast<social::UserService::Service *>(this));
+  builder.RegisterService(
+      static_cast<social::InteractionService::Service *>(this));
 
   std::vector<
       std::unique_ptr<grpc::experimental::ServerInterceptorFactoryInterface>>
