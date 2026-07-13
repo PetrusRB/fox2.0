@@ -167,6 +167,9 @@ grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
 
   auto user = AuthMiddleware::GetUser(context);
   std::string userId = user ? user->id : "";
+  if (!user) {
+    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
+  }
 
   for (int i = end - 1; i >= begin; --i) {
     auto *post = response->add_posts();
