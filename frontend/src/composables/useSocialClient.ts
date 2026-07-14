@@ -17,6 +17,46 @@ let interactionClient: InteractionServiceClient | null = null;
 let authClient: AuthServiceClient | null = null;
 let userClient: UserServiceClient | null = null;
 
+// --------------------- Helpers para decodificação ---------------------
+function decodeUrl(url: string): string {
+  if (!url) return url;
+  return url.replace(/(\\|\/)u([0-9a-fA-F]{4})/g, (_, _prefix, hex) =>
+    String.fromCharCode(parseInt(hex, 16)),
+  );
+}
+const utf8Decoder = new TextDecoder("utf-8");
+function utf8(textoIncorreto: string): string {
+  try {
+    const len = textoIncorreto.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+      bytes[i] = textoIncorreto.charCodeAt(i);
+    }
+
+    return utf8Decoder.decode(bytes);
+  } catch (e) {
+    return textoIncorreto;
+  }
+}
+function decodePost(post: Post): Post {
+  let decoded = post;
+  if (post.imageUrl) {
+    decoded = { ...decoded, imageUrl: decodeUrl(post.imageUrl) };
+  }
+  if (decoded.author?.avatar) {
+    decoded = {
+      ...decoded,
+      author: { ...decoded.author, avatar: decodeUrl(decoded.author.avatar) },
+    };
+  }
+  return {
+    ...decoded,
+    title: utf8(decoded.title),
+    content: utf8(decoded.content),
+  };
+}
+
 // --------------------- Helpers pros cookies ---------------------
 export function setCookie(name: string, value: string, days: number) {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
@@ -43,16 +83,37 @@ function getTransport(): GrpcWebFetchTransport {
   return transport;
 }
 
+const AUTH_BYPASS = new Set(["login", "refreshAccessToken"]);
+
+function createProtectedClient<T extends object>(client: T): T {
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (
+        typeof prop !== "string" ||
+        typeof value !== "function" ||
+        AUTH_BYPASS.has(prop)
+      ) {
+        return value;
+      }
+      return (...args: unknown[]) =>
+        handleUnauthenticated(() => value.apply(target, args));
+    },
+  });
+}
+
 function getPostClient(): PostServiceClient {
   if (!postClient) {
-    postClient = new PostServiceClient(getTransport());
+    postClient = createProtectedClient(new PostServiceClient(getTransport()));
   }
   return postClient;
 }
 
 function getInteractionClient(): InteractionServiceClient {
   if (!interactionClient) {
-    interactionClient = new InteractionServiceClient(getTransport());
+    interactionClient = createProtectedClient(
+      new InteractionServiceClient(getTransport()),
+    );
   }
   return interactionClient;
 }
@@ -66,7 +127,7 @@ function getAuthClient(): AuthServiceClient {
 
 function getUserClient(): UserServiceClient {
   if (!userClient) {
-    userClient = new UserServiceClient(getTransport());
+    userClient = createProtectedClient(new UserServiceClient(getTransport()));
   }
   return userClient;
 }
@@ -177,57 +238,30 @@ export async function createPost(
     throw new Error(validation.error.message);
   }
 
-  return handleUnauthenticated(async () => {
-    const client = getPostClient();
-    const { response } = await client.createPost({
-      title: clean.title,
-      content: clean.content,
-      imageUrl: clean.imageUrl,
-    });
-    return response;
+  const client = getPostClient();
+  const { response } = await client.createPost({
+    title: clean.title,
+    content: clean.content,
+    imageUrl: clean.imageUrl,
   });
-}
-
-function decodeUrl(url: string): string {
-  if (!url) return url;
-  return url.replace(/(\\|\/)u([0-9a-fA-F]{4})/g, (_, _prefix, hex) =>
-    String.fromCharCode(parseInt(hex, 16)),
-  );
-}
-
-function decodePostUrls(post: Post): Post {
-  let decoded = post;
-  if (post.imageUrl) {
-    decoded = { ...decoded, imageUrl: decodeUrl(post.imageUrl) };
-  }
-  if (decoded.author?.avatar) {
-    decoded = {
-      ...decoded,
-      author: { ...decoded.author, avatar: decodeUrl(decoded.author.avatar) },
-    };
-  }
-  return decoded;
+  return response;
 }
 
 export async function getPost(postId: string): Promise<Post> {
   const client = getPostClient();
   const { response } = await client.getPost({ postId });
-  return decodePostUrls(response);
+  return decodePost(response);
 }
 
 export async function deletePost(postId: string): Promise<void> {
-  return handleUnauthenticated(async () => {
-    const client = getPostClient();
-    await client.deletePost({ postId });
-  });
+  const client = getPostClient();
+  await client.deletePost({ postId });
 }
 
 export async function listFeed(page = 1, limit = 20): Promise<Post[]> {
-  return handleUnauthenticated(async () => {
-    const client = getPostClient();
-    const { response } = await client.listFeed({ page, limit });
-    return response.posts.map(decodePostUrls);
-  });
+  const client = getPostClient();
+  const { response } = await client.listFeed({ page, limit });
+  return response.posts.map(decodePost);
 }
 
 export async function listUserPosts(
@@ -235,22 +269,18 @@ export async function listUserPosts(
   page = 1,
   limit = 20,
 ): Promise<Post[]> {
-  return handleUnauthenticated(async () => {
-    const client = getPostClient();
-    const { response } = await client.listUserPosts({ userId, page, limit });
-    return response.posts.map(decodePostUrls);
-  });
+  const client = getPostClient();
+  const { response } = await client.listUserPosts({ userId, page, limit });
+  return response.posts.map(decodePost);
 }
 
 // --------------------- Interações ---------------------
 export async function toggleLikePost(
   postId: string,
 ): Promise<ToggleLikeResult> {
-  return handleUnauthenticated(async () => {
-    const client = getInteractionClient();
-    const { response } = await client.toggleLike({ postId });
-    return response;
-  });
+  const client = getInteractionClient();
+  const { response } = await client.toggleLike({ postId });
+  return response;
 }
 
 export async function addComment(
@@ -260,14 +290,12 @@ export async function addComment(
   const { sanitizeString } = await import("./sanitize");
   const cleanContent = sanitizeString(content, MAX_CONTENT_CHARS);
 
-  return handleUnauthenticated(async () => {
-    const client = getInteractionClient();
-    const { response } = await client.addComment({
-      postId,
-      content: cleanContent,
-    });
-    return response;
+  const client = getInteractionClient();
+  const { response } = await client.addComment({
+    postId,
+    content: cleanContent,
   });
+  return response;
 }
 
 export async function listComments(

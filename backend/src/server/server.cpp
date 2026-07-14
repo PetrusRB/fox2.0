@@ -154,6 +154,10 @@ grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
                                    const social::ListFeedRequest *request,
                                    social::PostList *response) {
 
+  auto user = AuthMiddleware::GetUser(context);
+  if (!user) {
+    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
+  }
   uint32_t page = request->page() > 0 ? request->page() : 1;
   uint32_t limit = request->limit() > 0 ? request->limit() : 20;
 
@@ -165,10 +169,6 @@ grpc::Status CrownServer::ListFeed(grpc::ServerContext *context,
   int end = total - static_cast<int>((page - 1) * limit);
   int begin = std::max(0, end - static_cast<int>(limit));
 
-  auto user = AuthMiddleware::GetUser(context);
-  if (!user) {
-    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
-  }
   std::string userId = user ? user->id : "";
 
   for (int i = end - 1; i >= begin; --i) {
@@ -190,17 +190,16 @@ CrownServer::ListUserPosts(grpc::ServerContext *context,
                            const social::ListUserPostsRequest *request,
                            social::PostList *response) {
 
+  auto user = AuthMiddleware::GetUser(context);
+  if (!user) {
+    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
+  }
   uint32_t page = request->page() > 0 ? request->page() : 1;
   uint32_t limit = request->limit() > 0 ? request->limit() : 20;
 
   int total = static_cast<int>(posts_.size());
   int end = total - static_cast<int>((page - 1) * limit);
   int begin = std::max(0, end - static_cast<int>(limit));
-
-  auto user = AuthMiddleware::GetUser(context);
-  if (!user) {
-    return grpc::Status(grpc::StatusCode::UNAUTHENTICATED, "Not authenticated");
-  }
 
   std::string userId = user ? user->id : "";
 
@@ -390,7 +389,8 @@ grpc::Status CrownServer::RefreshAccessToken(
   return grpc::Status::OK;
 }
 
-bool CrownServer::init(uint16_t port) {
+bool CrownServer::init(uint16_t port, AppContext &app) {
+  app_ = &app;
   std::string server_addr = absl::StrFormat("0.0.0.0:%d", port);
 
   grpc::EnableDefaultHealthCheckService(true);

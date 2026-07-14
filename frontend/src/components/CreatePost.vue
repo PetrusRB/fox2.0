@@ -4,6 +4,7 @@ import { createPost } from "@/composables/useSocialClient";
 import { MAX_TITLE_CHARS, MAX_CONTENT_CHARS } from "@/config/config";
 import BuTTon from "./ui/BuTTon.vue";
 import Avatar from "./ui/Avatar.vue";
+import FiLeUpload from "./ui/FiLeUpload.vue";
 import { useAuth } from "@/composables/useAuth";
 
 const emit = defineEmits<{
@@ -43,6 +44,14 @@ function getCounterColor(percent: number): string {
   if (percent > 90) return "var(--negative)";
   if (percent > 70) return "#f59e0b";
   return "var(--text-muted)";
+}
+
+function onImageUploaded(url: string) {
+  imageUrl.value = url;
+}
+
+function onImageError(message: string) {
+  error.value = message;
 }
 
 async function handleSubmit() {
@@ -98,24 +107,15 @@ async function handleSubmit() {
       />
 
       <Transition name="slide">
-        <div v-if="showImageInput" class="create-post__image-row">
-          <q-icon name="link" size="18px" class="create-post__image-icon" />
-          <input
+        <div v-if="showImageInput" class="create-post__image-section">
+          <FiLeUpload
             v-model="imageUrl"
-            type="url"
-            class="create-post__image-input"
-            placeholder="URL da imagem (opcional)"
-            :maxlength="2048"
+            :accept="['image/png', 'image/jpeg', 'image/gif', 'image/webp']"
+            folder="/posts"
+            :max-size="10 * 1024 * 1024"
+            @uploaded="onImageUploaded"
+            @error="onImageError"
           />
-          <button
-            class="create-post__image-remove"
-            @click="
-              imageUrl = '';
-              showImageInput = false;
-            "
-          >
-            <q-icon name="close" size="16px" />
-          </button>
         </div>
       </Transition>
     </div>
@@ -127,7 +127,7 @@ async function handleSubmit() {
           :class="{ 'create-post__action-btn--active': showImageInput }"
           @click="showImageInput = !showImageInput"
         >
-          <q-icon name="image" size="20px" />
+          <q-icon :name="imageUrl ? 'image' : 'add_photo_alternate'" size="20px" />
         </button>
       </div>
 
@@ -258,6 +258,10 @@ async function handleSubmit() {
     &:focus-within {
       border-color: var(--accent);
     }
+  }
+
+  &__image-section {
+    margin-top: 4px;
   }
 
   &__image-icon {
@@ -394,7 +398,7 @@ async function handleSubmit() {
 .slide-enter-to,
 .slide-leave-from {
   opacity: 1;
-  max-height: 60px;
+  max-height: 500px;
 }
 
 .fade-enter-active,

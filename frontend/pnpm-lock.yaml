@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@imagekit/javascript':
+        specifier: ^5.4.1
+        version: 5.4.1
       '@protobuf-ts/runtime':
         specifier: ^2.11.1
         version: 2.11.1
@@ -350,6 +353,9 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@imagekit/javascript@5.4.1':
+    resolution: {integrity: sha512-x29Yklu12sGtLh7aihSpmi6z09M+FJ+iWFSPZkq1b5ALf6pqZFUq49Rip9Y5qqn/KAxRz7bzmbV7APNIn9vq3A==}
 
   '@intlify/bundle-utils@11.2.4':
     resolution: {integrity: sha512-eE18yR9eM9k5n8snCkHIYp2MuVTxa19aF8z9OMyxXWv0frz2HlBZDGIPFjA38pP3OJ1IlRBXC/dW5GILeLMSCQ==}
@@ -3133,6 +3139,8 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@imagekit/javascript@5.4.1': {}
 
   '@intlify/bundle-utils@11.2.4(vue-i18n@11.4.6(vue@3.5.39(typescript@6.0.3)))':
     dependencies:

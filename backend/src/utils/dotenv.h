@@ -14,6 +14,12 @@
 
 namespace Crown {
 
+inline std::string GetEnv(const std::string &key,
+                          const std::string &fallback = "") {
+  const char *val = std::getenv(key.c_str());
+  return val ? std::string(val) : fallback;
+}
+
 inline void LoadEnv(const std::string &path) {
   std::ifstream file(path);
   if (!file.is_open()) {

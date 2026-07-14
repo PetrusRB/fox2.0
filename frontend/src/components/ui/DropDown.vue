@@ -84,6 +84,13 @@ onBeforeUnmount(() => {
         ref="menuRef"
         class="drop-down__menu"
       >
+        <template v-if="$slots.header">
+          <div class="drop-down__header">
+            <slot name="header" />
+          </div>
+          <div class="drop-down__divider" />
+        </template>
+
         <template v-for="item in items" :key="item.key">
           <div
             v-if="item.divider"
@@ -192,6 +199,10 @@ onBeforeUnmount(() => {
 
   &__item-icon {
     flex-shrink: 0;
+  }
+
+  &__header {
+    padding: 4px 0;
   }
 
   &__divider {

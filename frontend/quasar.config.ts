@@ -60,6 +60,10 @@ export default defineConfig((ctx) => {
         VITE_GRPC_HOST: "http://localhost:8080",
         VITE_GOOGLE_CLIENT_ID:
           "550172069250-n6dpi2gc3r800ope6v0at1u4bl7afa33.apps.googleusercontent.com",
+        VITE_IMAGEKIT_PUBLIC_KEY: "public_3ODj7S1JtiJQerO1RCJNouFtzik=",
+        VITE_IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/9k3mcoolader",
+        VITE_IMAGEKIT_SIGNATURE_ENDPOINT:
+          "http://localhost:8081/api/imagekit/signature",
       },
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},

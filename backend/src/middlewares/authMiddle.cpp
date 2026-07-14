@@ -256,8 +256,6 @@ bool AuthInterceptor::isPublicMethod(const std::string &method) const {
   return method.find("Login") != std::string::npos ||
          method.find("RefreshAccessToken") != std::string::npos ||
          method.find("GetPost") != std::string::npos ||
-         method.find("ListFeed") != std::string::npos ||
-         method.find("ListUserPosts") != std::string::npos ||
          method.find("GetProfile") != std::string::npos ||
          method.find("SearchUsers") != std::string::npos ||
          method.find("GetFollowers") != std::string::npos ||

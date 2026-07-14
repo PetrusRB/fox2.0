@@ -23,6 +23,7 @@
     "postinstall": "quasar prepare --silent"
   },
   "dependencies": {
+    "@imagekit/javascript": "^5.4.1",
     "@protobuf-ts/runtime": "^2.11.1",
     "@protobuf-ts/runtime-rpc": "^2.11.1",
     "@quasar/extras": "^2.0.0",

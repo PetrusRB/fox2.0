@@ -15,11 +15,11 @@
       const grpcUrl = process.env.VITE_GRPC_HOST || 'http://localhost:50051';
       const grpcOrigin = grpcUrl.replace(/\/+$/, ''); 
       const isLocal = /localhost|127\.0\.0\.1/.test(grpcOrigin); 
-      const connectSrc = isLocal ? "connect-src 'self' ws://localhost:* http://localhost:*" : "connect-src 'self' " + grpcOrigin; 
+      const connectSrc = isLocal ? "connect-src 'self' ws://localhost:* http://localhost:* https://upload.imagekit.io" : "connect-src 'self' " + grpcOrigin + " https://upload.imagekit.io";
     %>
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https:;<% if (ctx.dev) { %> <%= connectSrc %>; worker-src 'self' blob:;<% } %>"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' http: https: blob:; <%= connectSrc %>; worker-src 'self' blob:;"
     />
 
     <link

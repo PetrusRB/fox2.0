@@ -5,8 +5,9 @@ import { useQuasar } from "quasar";
 import Avatar from "./ui/Avatar.vue";
 import BuTTon from "./ui/BuTTon.vue";
 import InpUt from "./ui/InpUt.vue";
+import Dropdown, { DropDownItem } from "./ui/DropDown.vue";
 import { useAuth } from "@/composables/useAuth";
-const { user } = useAuth();
+const { user, logout } = useAuth();
 
 export interface NavItem {
   key: string;
@@ -50,6 +51,30 @@ defineEmits<{
   logoClick: [];
   toggleDrawer: [];
 }>();
+
+import { matExitToApp } from "@quasar/extras/material-icons";
+
+const menuItems: DropDownItem[] = [
+  { key: "settings", label: "Settings", icon: "settings" },
+  { key: "divider", label: "", divider: true },
+  {
+    key: "logout",
+    label: "Logout",
+    icon: `${matExitToApp}`,
+    danger: true,
+  },
+];
+
+async function handleMenuSelect(item: DropDownItem) {
+  switch (item.key) {
+    case "logout":
+      await logout();
+      break;
+    case "settings":
+      console.log("cooming soon");
+      break;
+  }
+}
 
 const route = useRoute();
 const $q = useQuasar();
@@ -156,7 +181,27 @@ const isMobile = computed(() => $q.screen.lt.md);
           <BuTTon variant="icon" icon="notifications" :badge="3" />
 
           <!-- User Avatar -->
-          <Avatar :src="user?.avatar" size="md" />
+          <Dropdown
+            :items="menuItems"
+            placement="right"
+            @select="handleMenuSelect"
+          >
+            <template #trigger>
+              <div class="topbar__avatar">
+                <Avatar :src="user?.avatar" size="md" />
+              </div>
+            </template>
+
+            <template v-if="user" #header>
+              <div class="topbar__user-info">
+                <Avatar :src="user.avatar" size="sm" />
+                <div class="topbar__user-details">
+                  <span class="topbar__user-name">{{ user.name }}</span>
+                  <span class="topbar__user-handle">@{{ user.handle }}</span>
+                </div>
+              </div>
+            </template>
+          </Dropdown>
         </div>
       </div>
     </div>
@@ -449,20 +494,33 @@ const isMobile = computed(() => $q.screen.lt.md);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: var(--bg-elevated);
-    border: 2px solid var(--border-color);
-    border-radius: 50%;
-    color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease;
-    margin-left: 4px;
+  }
 
-    &:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
+  &__user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__user-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__user-handle {
+    font-size: 12px;
+    color: var(--text-muted);
   }
 }
 </style>

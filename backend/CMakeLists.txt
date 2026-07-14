@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(gRPC REQUIRED)
 find_package(absl REQUIRED)
 find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
 find_program(PROTOC_EXECUTABLE protoc REQUIRED)
@@ -60,6 +61,8 @@ file(GLOB_RECURSE SERVER_HDRS CONFIGURE_DEPENDS src/*.h)
 
 add_executable(server ${SERVER_SRCS} ${SERVER_HDRS} ${BACKEND_GEN_HDRS})
 
+target_compile_definitions(server PRIVATE _WIN32_WINNT=0x0A00 CPPHTTPLIB_OPENSSL_SUPPORT)
+
 target_include_directories(server PRIVATE
     ${GEN_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -77,6 +80,9 @@ target_link_libraries(server
     absl::log
     absl::log_initialize
     CURL::libcurl
+    OpenSSL::SSL
+    OpenSSL::Crypto
     fmt
     PkgConfig::LIBXML2
+    bcrypt
   )

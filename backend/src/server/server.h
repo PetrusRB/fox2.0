@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../app.h"
 #include "../gen/social.grpc.pb.h"
 #include <cstdint>
 #include <grpcpp/grpcpp.h>
@@ -21,7 +22,7 @@ class CrownServer : public social::PostService::Service,
                     public social::UserService::Service,
                     public social::InteractionService::Service {
 public:
-  bool init(uint16_t port);
+  bool init(uint16_t port, AppContext &app);
   void shutdown();
 
   grpc::Status CreatePost(grpc::ServerContext *context,
@@ -62,6 +63,7 @@ public:
                           social::ToggleLikeResult *response) override;
 
 private:
+  AppContext *app_ = nullptr;
   std::unique_ptr<grpc::Server> server_;
   std::vector<social::Post> posts_;
   std::vector<social::User> users_;

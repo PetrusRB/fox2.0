@@ -22,7 +22,7 @@ const navItems: NavItem[] = [
     icon: "notifications",
     to: "/notifications",
   },
-  { key: "messages", label: "Mensagens", icon: "chat", to: "/messages" },
+  { key: "chat", label: "Chat", icon: "chat", to: "/chat" },
 ];
 
 const navActions: NavAction[] = [
@@ -44,6 +44,12 @@ const sidebarItems: SidebarItem[] = [
     icon: "notifications",
     to: "/notifications",
     badge: 5,
+  },
+  {
+    key: "communities",
+    label: "Comunidades",
+    icon: "diversity_1",
+    to: "/messages",
   },
   {
     key: "messages",
@@ -112,11 +118,7 @@ function toggleDrawer() {
     >
       <div class="mobile-sidebar__header">
         <div class="mobile-sidebar__profile">
-          <Avatar
-            :src="user?.avatar"
-            size="lg"
-            icon="person"
-          />
+          <Avatar :src="user?.avatar" size="lg" icon="person" />
           <div class="mobile-sidebar__info">
             <span class="mobile-sidebar__name">{{ user?.name }}</span>
             <span class="mobile-sidebar__handle">@{{ user?.handle }}</span>

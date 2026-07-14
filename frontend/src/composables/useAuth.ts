@@ -88,31 +88,25 @@ export function useAuth() {
         saveUser(updated);
       }
     } catch (e) {
-      if (e instanceof RpcError && e.code === "UNAUTHENTICATED") {
-        console.log(
-          "Piece of shitos, is trying to do refresh token. But is not working, look a that :D",
-        );
-        const ok = await refreshAccessToken();
-        if (ok) {
-          console.log(
-            "Misericordia, funcionou o bem dito refresh token. YEAAAAAAAH!!!!!!!",
-          );
-          try {
-            const fresh = await getProfile(userId);
-            if (fresh.displayName || fresh.username) {
-              const updated = mapGrpcUser(fresh);
-              user.value = updated;
-              saveUser(updated);
-            }
-          } catch {
-            if (!user.value) return false;
+      if (!(e instanceof RpcError) || e.code !== "UNAUTHENTICATED") {
+        if (!user.value) return false;
+        return true;
+      }
+      const ok = await refreshAccessToken();
+      if (ok) {
+        try {
+          const fresh = await getProfile(userId);
+          if (fresh.displayName || fresh.username) {
+            const updated = mapGrpcUser(fresh);
+            user.value = updated;
+            saveUser(updated);
           }
-        } else {
-          user.value = null;
-          return false;
+        } catch {
+          if (!user.value) return false;
         }
       } else {
-        if (!user.value) return false;
+        user.value = null;
+        return false;
       }
     }
 
