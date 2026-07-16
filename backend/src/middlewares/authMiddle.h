@@ -2,6 +2,7 @@
 
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/interceptor.h>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -22,7 +23,7 @@ public:
   static void SetUser(grpc::ServerContext *context, AuthenticatedUser user);
 
   static std::pair<grpc::Status, AuthenticatedUser>
-  ValidateGoogleToken(const std::string &access_token);
+  ValidateIdToken(const std::string &id_token);
 
   static std::pair<grpc::Status, std::pair<std::string, std::string>>
   ExchangeCodeForToken(const std::string &authorization_code,

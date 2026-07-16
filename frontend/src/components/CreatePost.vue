@@ -86,7 +86,7 @@ async function handleSubmit() {
   <article class="create-post">
     <div class="create-post__header">
       <Avatar :src="user?.avatar" size="md" />
-      <span class="create-post__label">Criar post</span>
+      <span class="create-post__label">Criar um post</span>
     </div>
 
     <div class="create-post__body">
@@ -127,7 +127,10 @@ async function handleSubmit() {
           :class="{ 'create-post__action-btn--active': showImageInput }"
           @click="showImageInput = !showImageInput"
         >
-          <q-icon :name="imageUrl ? 'image' : 'add_photo_alternate'" size="20px" />
+          <q-icon
+            :name="imageUrl ? 'image' : 'add_photo_alternate'"
+            size="20px"
+          />
         </button>
       </div>
 

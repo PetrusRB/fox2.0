@@ -231,6 +231,7 @@ message LoginResult {
     string refresh_token = 2;
     uint32 expires_in = 3;
     User user = 4;
+    string id_token = 5;
 }
 
 message FollowResult {

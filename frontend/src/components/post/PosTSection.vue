@@ -51,6 +51,7 @@ onMounted(() => {
 
   &__empty {
     color: var(--text-secondary);
+    text-align: center;
   }
   &__loading {
     display: flex;

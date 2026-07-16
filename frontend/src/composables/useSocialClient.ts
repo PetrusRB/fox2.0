@@ -143,8 +143,8 @@ export async function loginWithGoogle(
     redirectUri,
   });
 
-  if (response.accessToken) {
-    setCookie("access_token", response.accessToken, 1);
+  if (response.idToken) {
+    setCookie("id_token", response.idToken, 1);
     if (response.refreshToken) {
       setCookie("refresh_token", response.refreshToken, 30);
     }
@@ -154,11 +154,11 @@ export async function loginWithGoogle(
 }
 
 export function hasAccessToken(): boolean {
-  return !!getCookie("access_token");
+  return !!getCookie("id_token");
 }
 
 export function clearAccessToken(): void {
-  deleteCookie("access_token");
+  deleteCookie("id_token");
   deleteCookie("refresh_token");
 }
 
@@ -189,8 +189,8 @@ export async function refreshAccessToken(): Promise<boolean> {
       refreshToken,
     });
 
-    if (response.accessToken) {
-      setCookie("access_token", response.accessToken, 1);
+    if (response.idToken) {
+      setCookie("id_token", response.idToken, 1);
       return true;
     }
     return false;

@@ -1,64 +1,19 @@
 #include "authMiddle.h"
+#include "../jwt/validator.h"
+#include "../libs/http.h"
+#include "../libs/json.hpp"
 #include "../server/server.h"
 #include "../utils/sanitize.h"
 
-#include <cstdlib>
-#include <curl/curl.h>
 #include <iostream>
 
 namespace Crown {
 
+using nlohmann::json;
+
 std::unordered_map<grpc::ServerContext *, AuthenticatedUser>
     AuthMiddleware::users_;
 std::mutex AuthMiddleware::mutex_;
-
-static size_t CurlWriteCallback(void *contents, size_t size, size_t nmemb,
-                                std::string *userp) {
-  userp->append(static_cast<char *>(contents), size * nmemb);
-  return size * nmemb;
-}
-
-static std::string ExtractJsonString(const std::string &json,
-                                     const std::string &key) {
-  std::string search = "\"" + key + "\"";
-  auto pos = json.find(search);
-  if (pos == std::string::npos)
-    return "";
-
-  pos = json.find("\"", pos + search.size());
-  if (pos == std::string::npos)
-    return "";
-  pos++;
-
-  auto end = json.find("\"", pos);
-  if (end == std::string::npos)
-    return "";
-
-  return json.substr(pos, end - pos);
-}
-
-static int ExtractJsonInt(const std::string &json, const std::string &key) {
-  std::string search = "\"" + key + "\"";
-  auto pos = json.find(search);
-  if (pos == std::string::npos)
-    return 0;
-
-  pos = json.find(":", pos + search.size());
-  if (pos == std::string::npos)
-    return 0;
-  pos++;
-
-  while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t'))
-    pos++;
-
-  auto end = pos;
-  while (end < json.size() && json[end] >= '0' && json[end] <= '9')
-    end++;
-
-  if (end == pos)
-    return 0;
-  return std::stoi(json.substr(pos, end - pos));
-}
 
 std::optional<AuthenticatedUser>
 AuthMiddleware::GetUser(grpc::ServerContext *context) {
@@ -77,58 +32,18 @@ void AuthMiddleware::SetUser(grpc::ServerContext *context,
 }
 
 std::pair<grpc::Status, AuthenticatedUser>
-AuthMiddleware::ValidateGoogleToken(const std::string &access_token) {
-  // Uma chamada só: userinfo retorna sub, email, name, picture
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    return {grpc::Status(grpc::StatusCode::INTERNAL,
-                         "Failed to initialize HTTP client"),
-            {}};
-  }
+AuthMiddleware::ValidateIdToken(const std::string &id_token) {
 
-  std::string response;
-  struct curl_slist *headers = nullptr;
-  std::string auth_header = "Authorization: Bearer " + access_token;
-  headers = curl_slist_append(headers, auth_header.c_str());
+  JwtValidator validator;
+  auto user = validator.validateToken(id_token);
 
-  curl_easy_setopt(curl, CURLOPT_URL,
-                   "https://www.googleapis.com/oauth2/v3/userinfo");
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-
-  CURLcode res = curl_easy_perform(curl);
-  long http_code = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-  curl_easy_cleanup(curl);
-  curl_slist_free_all(headers);
-
-  if (res != CURLE_OK) {
-    return {
-        grpc::Status(grpc::StatusCode::UNAVAILABLE, "Failed to validate token"),
-        {}};
-  }
-
-  if (http_code != 200) {
+  if (!user.has_value()) {
     return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
                          "Invalid or expired token"),
             {}};
   }
 
-  AuthenticatedUser user;
-  user.id = ExtractJsonString(response, "sub");
-  user.email = ExtractJsonString(response, "email");
-  user.name = ExtractJsonString(response, "given_name");
-  user.picture = DecodeUnicodeEscapes(ExtractJsonString(response, "picture"));
-
-  if (user.id.empty()) {
-    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED,
-                         "Invalid token response"),
-            {}};
-  }
-
-  return {grpc::Status::OK, user};
+  return {grpc::Status::OK, user.value()};
 }
 
 std::pair<grpc::Status, std::pair<std::string, std::string>>
@@ -142,53 +57,56 @@ AuthMiddleware::ExchangeCodeForToken(const std::string &authorization_code,
             {"", ""}};
   }
 
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    return {grpc::Status(grpc::StatusCode::INTERNAL,
-                         "Failed to initialize HTTP client"),
+  httplib::Client req("https://oauth2.googleapis.com");
+
+  json body;
+  body["code"] = authorization_code;
+  body["client_id"] = std::string(client_id);
+  body["client_secret"] = std::string(client_secret);
+  body["redirect_uri"] = redirect_uri;
+  body["grant_type"] = "authorization_code";
+
+  httplib::Headers headers = {{"Content-Type", "application/json"}};
+
+  auto resposta = req.Post("/token", headers, body.dump(), "application/json");
+
+  if (!resposta) {
+    return {grpc::Status(grpc::StatusCode::UNAVAILABLE,
+                         "Failed to connect to Google"),
             {"", ""}};
   }
 
-  std::string post_fields =
-      "code=" + authorization_code + "&client_id=" + std::string(client_id) +
-      "&client_secret=" + std::string(client_secret) +
-      "&redirect_uri=" + redirect_uri + "&grant_type=authorization_code";
-
-  std::string response;
-
-  curl_easy_setopt(curl, CURLOPT_URL, "https://oauth2.googleapis.com/token");
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields.c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-
-  CURLcode res = curl_easy_perform(curl);
-  long http_code = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-  curl_easy_cleanup(curl);
-
-  if (res != CURLE_OK) {
-    return {
-        grpc::Status(grpc::StatusCode::UNAVAILABLE, "Failed to exchange code"),
-        {"", ""}};
+  if (resposta->status != 200) {
+    json erro;
+    try {
+      erro = json::parse(resposta->body);
+    } catch (...) {
+      erro = {};
+    }
+    std::string erro_msg = erro.value("error_description",
+                                      "Failed to exchange authorization code");
+    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED, erro_msg),
+            {"", ""}};
   }
 
-  if (http_code != 200) {
-    std::string error = ExtractJsonString(response, "error_description");
-    if (error.empty())
-      error = "Failed to exchange authorization code";
-    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED, error), {"", ""}};
-  }
-
-  std::string access_token = ExtractJsonString(response, "access_token");
-  std::string refresh_token = ExtractJsonString(response, "refresh_token");
-
-  if (access_token.empty()) {
+  json dados;
+  try {
+    dados = json::parse(resposta->body);
+  } catch (const json::parse_error &e) {
     return {grpc::Status(grpc::StatusCode::INTERNAL, "Invalid token response"),
             {"", ""}};
   }
 
-  return {grpc::Status::OK, {access_token, refresh_token}};
+  std::string access_token = dados.value("access_token", "");
+  std::string refresh_token = dados.value("refresh_token", "");
+  std::string id_token = dados.value("id_token", "");
+
+  if (id_token.empty()) {
+    return {grpc::Status(grpc::StatusCode::INTERNAL, "No id_token in response"),
+            {"", ""}};
+  }
+
+  return {grpc::Status::OK, {id_token, refresh_token}};
 }
 
 std::pair<grpc::Status, std::string>
@@ -201,52 +119,52 @@ AuthMiddleware::RefreshAccessToken(const std::string &refresh_token) {
             ""};
   }
 
-  CURL *curl = curl_easy_init();
-  if (!curl) {
-    return {grpc::Status(grpc::StatusCode::INTERNAL,
-                         "Failed to initialize HTTP client"),
-            ""};
-  }
+  httplib::Client req("https://oauth2.googleapis.com");
 
-  std::string post_fields =
-      "client_id=" + std::string(client_id) +
-      "&client_secret=" + std::string(client_secret) +
-      "&refresh_token=" + refresh_token + "&grant_type=refresh_token";
+  json body;
+  body["client_id"] = std::string(client_id);
+  body["client_secret"] = std::string(client_secret);
+  body["refresh_token"] = refresh_token;
+  body["grant_type"] = "refresh_token";
 
-  std::string response;
+  httplib::Headers headers = {{"Content-Type", "application/json"}};
 
-  curl_easy_setopt(curl, CURLOPT_URL, "https://oauth2.googleapis.com/token");
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields.c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlWriteCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+  auto resposta = req.Post("/token", headers, body.dump(), "application/json");
 
-  CURLcode res = curl_easy_perform(curl);
-  long http_code = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-  curl_easy_cleanup(curl);
-
-  if (res != CURLE_OK) {
+  if (!resposta) {
     return {grpc::Status(grpc::StatusCode::UNAVAILABLE,
-                         "Failed to refresh token"),
+                         "Failed to connect to Google"),
             ""};
   }
 
-  if (http_code != 200) {
-    std::string error = ExtractJsonString(response, "error_description");
-    if (error.empty())
-      error = "Failed to refresh access token";
-    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED, error), ""};
+  if (resposta->status != 200) {
+    json erro;
+    try {
+      erro = json::parse(resposta->body);
+    } catch (...) {
+      erro = {};
+    }
+    std::string erro_msg =
+        erro.value("error_description", "Failed to refresh access token");
+    return {grpc::Status(grpc::StatusCode::UNAUTHENTICATED, erro_msg), ""};
   }
 
-  std::string access_token = ExtractJsonString(response, "access_token");
-
-  if (access_token.empty()) {
+  json dados;
+  try {
+    dados = json::parse(resposta->body);
+  } catch (const json::parse_error &e) {
     return {grpc::Status(grpc::StatusCode::INTERNAL, "Invalid token response"),
             ""};
   }
 
-  return {grpc::Status::OK, access_token};
+  std::string id_token = dados.value("id_token", "");
+
+  if (id_token.empty()) {
+    return {grpc::Status(grpc::StatusCode::INTERNAL, "No id_token in response"),
+            ""};
+  }
+
+  return {grpc::Status::OK, id_token};
 }
 
 AuthInterceptor::AuthInterceptor(grpc::experimental::ServerRpcInfo *info)
@@ -290,7 +208,6 @@ void AuthInterceptor::validateToken(
 
   std::string token;
 
-  // Tenta Authorization header
   auto it = recv_metadata->find("authorization");
   if (it != recv_metadata->end()) {
     std::string raw(it->second.data(), it->second.size());
@@ -301,13 +218,12 @@ void AuthInterceptor::validateToken(
     }
   }
 
-  // Se não tem Authorization, tenta cookie access_token
   if (token.empty()) {
     auto cookie_it = recv_metadata->find("cookie");
     if (cookie_it != recv_metadata->end()) {
       std::string cookie_str(cookie_it->second.data(),
                              cookie_it->second.size());
-      token = ExtractCookie(cookie_str, "access_token");
+      token = ExtractCookie(cookie_str, "id_token");
     }
   }
 
@@ -316,7 +232,7 @@ void AuthInterceptor::validateToken(
     return;
   }
 
-  auto [status, user] = AuthMiddleware::ValidateGoogleToken(token);
+  auto [status, user] = AuthMiddleware::ValidateIdToken(token);
   if (!status.ok()) {
     token_valid_ = false;
     return;
@@ -329,7 +245,6 @@ void AuthInterceptor::validateToken(
 void AuthInterceptor::Intercept(
     grpc::experimental::InterceptorBatchMethods *methods) {
 
-  // metadata do cliente recebida → valida o token
   if (methods->QueryInterceptionHookPoint(
           grpc::experimental::InterceptionHookPoints::
               POST_RECV_INITIAL_METADATA)) {
@@ -339,7 +254,6 @@ void AuthInterceptor::Intercept(
     }
   }
 
-  // antes de enviar status → sobrescreve com UNAUTHENTICATED se inválido
   if (methods->QueryInterceptionHookPoint(
           grpc::experimental::InterceptionHookPoints::PRE_SEND_STATUS)) {
     if (!token_valid_) {

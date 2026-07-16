@@ -1,6 +1,7 @@
 #include "server.h"
 
 #include "../middlewares/authMiddle.h"
+#include "../middlewares/ratelimit.h"
 #include "../utils/sanitize.h"
 #include <absl/strings/str_format.h>
 #include <absl/time/time.h>
@@ -337,12 +338,12 @@ grpc::Status CrownServer::Login(grpc::ServerContext *context,
     return status;
   }
 
-  auto [user_status, user] = AuthMiddleware::ValidateGoogleToken(tokens.first);
+  auto [user_status, user] = AuthMiddleware::ValidateIdToken(tokens.first);
   if (!user_status.ok()) {
     return user_status;
   }
 
-  response->set_access_token(tokens.first);
+  response->set_id_token(tokens.first);
   response->set_refresh_token(tokens.second);
   response->set_expires_in(REFRESH_EXPIRES);
 
@@ -376,14 +377,14 @@ grpc::Status CrownServer::RefreshAccessToken(
                         "Refresh token is required");
   }
 
-  auto [status, new_access_token] =
+  auto [status, new_id_token] =
       AuthMiddleware::RefreshAccessToken(request->refresh_token());
 
   if (!status.ok()) {
     return status;
   }
 
-  response->set_access_token(new_access_token);
+  response->set_id_token(new_id_token);
   response->set_expires_in(REFRESH_EXPIRES);
 
   return grpc::Status::OK;
@@ -407,6 +408,15 @@ bool CrownServer::init(uint16_t port, AppContext &app) {
       std::unique_ptr<grpc::experimental::ServerInterceptorFactoryInterface>>
       creators;
   creators.push_back(std::make_unique<AuthInterceptorFactory>());
+
+  std::vector<Crown::RouteConfig> routes = {
+      {"/social.PostService/CreatePost", 5, std::chrono::seconds(60)},
+      {"/social.InteractionService/ToggleLike", 10, std::chrono::seconds(60)},
+      {"/social.InteractionService/AddComment", 5, std::chrono::seconds(60)},
+      {"/social.SocialService/ToggleFollow", 5, std::chrono::seconds(60)},
+  };
+  creators.push_back(std::make_unique<Crown::RatelimitInterceptFactory>(routes));
+
   builder.experimental().SetInterceptorCreators(std::move(creators));
 
   server_ = builder.BuildAndStart();

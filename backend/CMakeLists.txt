@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ── Dependencies ────────────────────────────────────────
 find_package(gRPC REQUIRED)
 find_package(absl REQUIRED)
-find_package(CURL REQUIRED)
+
 find_package(OpenSSL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
@@ -79,7 +79,7 @@ target_link_libraries(server
     absl::flags_parse
     absl::log
     absl::log_initialize
-    CURL::libcurl
+
     OpenSSL::SSL
     OpenSSL::Crypto
     fmt

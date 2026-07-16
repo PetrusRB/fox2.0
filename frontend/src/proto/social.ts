@@ -542,6 +542,10 @@ export interface LoginResult {
      * @generated from protobuf field: social.User user = 4
      */
     user?: User;
+    /**
+     * @generated from protobuf field: string id_token = 5
+     */
+    idToken: string;
 }
 /**
  * @generated from protobuf message social.FollowResult
@@ -2531,7 +2535,8 @@ class LoginResult$Type extends MessageType<LoginResult> {
             { no: 1, name: "access_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "refresh_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "expires_in", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 4, name: "user", kind: "message", T: () => User }
+            { no: 4, name: "user", kind: "message", T: () => User },
+            { no: 5, name: "id_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<LoginResult>): LoginResult {
@@ -2539,6 +2544,7 @@ class LoginResult$Type extends MessageType<LoginResult> {
         message.accessToken = "";
         message.refreshToken = "";
         message.expiresIn = 0;
+        message.idToken = "";
         if (value !== undefined)
             reflectionMergePartial<LoginResult>(this, message, value);
         return message;
@@ -2559,6 +2565,9 @@ class LoginResult$Type extends MessageType<LoginResult> {
                     break;
                 case /* social.User user */ 4:
                     message.user = User.internalBinaryRead(reader, reader.uint32(), options, message.user);
+                    break;
+                case /* string id_token */ 5:
+                    message.idToken = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -2584,6 +2593,9 @@ class LoginResult$Type extends MessageType<LoginResult> {
         /* social.User user = 4; */
         if (message.user)
             User.internalBinaryWrite(message.user, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* string id_token = 5; */
+        if (message.idToken !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.idToken);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
