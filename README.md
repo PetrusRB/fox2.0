@@ -12,7 +12,7 @@
 <img src="https://img.shields.io/badge/gRPC-C++-244c5a?style=flat-square&logo=grpc&logoColor=white" />
 <img src="https://img.shields.io/badge/Protobuf-3-4A5568?style=flat-square&logo=protocolbuffers&logoColor=white" />
 <img src="https://img.shields.io/badge/Google-OAuth-4285F4?style=flat-square&logo=google&logoColor=white" />
-<img src="https://img.shields.io/badge/Supabase-Latest-4285F4?style=flat-square&logo=supabase&logoColor=white" />
+<img src="https://img.shields.io/badge/Supabase-C++-4285F4?style=flat-square&logo=supabase&logoColor=white" />
 
 </div>
 
