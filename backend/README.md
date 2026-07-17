@@ -10,5 +10,5 @@ A backend desse projeto lindo e maravilhoso
 - GRPC (o tipo de API é GRPC)
 - Scriptzinha de build (root 'b.bat')
 - Sistema de likes
-- Sistema de posts (salvos em um vetor local, por em quanto não tem banco de dados)
+- Sistema de posts
 - Sistemas de comentarios
