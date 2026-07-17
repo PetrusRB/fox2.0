@@ -93,20 +93,19 @@ export function useAuth() {
         return true;
       }
       const ok = await refreshAccessToken();
-      if (ok) {
-        try {
-          const fresh = await getProfile(userId);
-          if (fresh.displayName || fresh.username) {
-            const updated = mapGrpcUser(fresh);
-            user.value = updated;
-            saveUser(updated);
-          }
-        } catch {
-          if (!user.value) return false;
-        }
-      } else {
+      if (!ok) {
         user.value = null;
         return false;
+      }
+      try {
+        const fresh = await getProfile(userId);
+        if (fresh.displayName || fresh.username) {
+          const updated = mapGrpcUser(fresh);
+          user.value = updated;
+          saveUser(updated);
+        }
+      } catch {
+        if (!user.value) return false;
       }
     }
 

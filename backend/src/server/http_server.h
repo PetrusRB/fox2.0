@@ -122,14 +122,14 @@ inline void StartSignatureServer(uint16_t port, AppContext &app) {
       resp["url"] = row["url"];
       resp["file_id"] = row["file_id"];
       res.set_content(resp.dump(), "application/json");
+      return;
     } catch (const std::exception &e) {
       res.status = 500;
       res.set_content(std::string(R"({"error":"Falha ao consultar banco: ")") +
                           e.what() + R"(","found":false})",
                       "application/json");
+      return;
     }
-
-    res.set_content(R"({"found":false})", "application/json");
   });
 
   svr->Post("/api/imagekit/register", [&app](const httplib::Request &req,
