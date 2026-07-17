@@ -44,7 +44,7 @@ const props = withDefaults(defineProps<NavBarProps>(), {
   brand: "Fox",
   brandIcon: "pets",
   items: () => [],
-  actions: () => [],
+  actions: () => []
 });
 
 defineEmits<{
@@ -61,8 +61,8 @@ const menuItems: DropDownItem[] = [
     key: "logout",
     label: "Logout",
     icon: `${matExitToApp}`,
-    danger: true,
-  },
+    danger: true
+  }
 ];
 
 async function handleMenuSelect(item: DropDownItem) {

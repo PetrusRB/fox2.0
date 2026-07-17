@@ -10,7 +10,7 @@ export interface AppAvatarProps {
 const props = withDefaults(defineProps<AppAvatarProps>(), {
   icon: "search",
   size: "md",
-  src: "",
+  src: ""
 });
 
 const PLACEHOLDER = "/placeholderpfp.png";

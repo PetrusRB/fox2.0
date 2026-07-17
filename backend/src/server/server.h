@@ -13,8 +13,6 @@
 #define MAX_TITLE_CHARS 256
 #define MAX_IMAGE_CHARS 2048
 
-constexpr int REFRESH_EXPIRES = 3600;
-
 namespace Crown {
 
 class CrownServer : public social::PostService::Service,

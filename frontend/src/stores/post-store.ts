@@ -3,9 +3,11 @@ import {
   listFeed,
   deletePost,
   toggleLikePost,
+  isAuthenticated
 } from "@/composables/useSocialClient";
 import { MAX_PAGE_FEED, MIN_PAGE_FEED } from "@/config/config";
 import type { Post } from "@/proto/social";
+import { RpcError } from "@protobuf-ts/runtime-rpc";
 import { defineStore, acceptHMRUpdate } from "pinia";
 
 function toPlain(post: Post): Post {
@@ -17,10 +19,10 @@ function toPlain(post: Post): Post {
     likesCount: post.likesCount,
     commentsCount: post.commentsCount,
     isLikedByMe: post.isLikedByMe,
-    createdAt: post.createdAt,
+    createdAt: post.createdAt
   };
 
-  if (!post.author) return base;
+  if (!post.author || !post.author.id) return base;
 
   return {
     ...base,
@@ -36,8 +38,8 @@ function toPlain(post: Post): Post {
       postsCount: post.author.postsCount,
       createdAt: post.author.createdAt,
       isFollowingMe: post.author.isFollowingMe,
-      isFollowedByMe: post.author.isFollowedByMe,
-    },
+      isFollowedByMe: post.author.isFollowedByMe
+    }
   };
 }
 
@@ -65,17 +67,17 @@ export const usePostStore = defineStore("post", {
     page: 1,
     hasMore: true,
     _likeVersions: new Map(),
-    _pendingLikes: new Set(),
+    _pendingLikes: new Set()
   }),
 
   getters: {
-    postById: (state) => (id: string) => state.posts.find((p) => p.id === id),
+    postById: state => (id: string) => state.posts.find(p => p.id === id),
 
-    sortedPosts: (state) =>
+    sortedPosts: state =>
       [...state.posts].sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
   },
 
   actions: {
@@ -89,6 +91,13 @@ export const usePostStore = defineStore("post", {
         this.page = 1;
         this.hasMore = posts.length === 20;
       } catch (err) {
+        if (
+          err instanceof RpcError &&
+          err.code === "UNAUTHENTICATED" &&
+          !isAuthenticated()
+        ) {
+          this.posts = [];
+        }
         this.error = `Falha ao carregar feed: ${err}`;
       } finally {
         this.isLoading = false;
@@ -118,7 +127,7 @@ export const usePostStore = defineStore("post", {
         const created = await createPost(
           post.title,
           post.content,
-          post.imageUrl,
+          post.imageUrl
         );
         this.posts.unshift(toPlain(created));
         return created;
@@ -131,7 +140,7 @@ export const usePostStore = defineStore("post", {
     },
 
     async removePost(id: string) {
-      const index = this.posts.findIndex((p) => p.id === id);
+      const index = this.posts.findIndex(p => p.id === id);
       if (index === -1) return;
 
       const removed = this.posts[index]!;
@@ -149,7 +158,7 @@ export const usePostStore = defineStore("post", {
     },
 
     async toggleLike(id: string) {
-      const post = this.posts.find((p) => p.id === id);
+      const post = this.posts.find(p => p.id === id);
       if (!post) return;
 
       if (this._pendingLikes.has(id)) return;
@@ -187,8 +196,8 @@ export const usePostStore = defineStore("post", {
 
     clearError() {
       this.error = null;
-    },
-  },
+    }
+  }
 });
 
 if (import.meta.hot) {

@@ -20,13 +20,13 @@ const navItems: NavItem[] = [
     key: "notifications",
     label: "Notificações",
     icon: "notifications",
-    to: "/notifications",
+    to: "/notifications"
   },
-  { key: "chat", label: "Chat", icon: "chat", to: "/chat" },
+  { key: "chat", label: "Chat", icon: "chat", to: "/chat" }
 ];
 
 const navActions: NavAction[] = [
-  { key: "create", icon: "add_circle", tooltip: "Criar publicação" },
+  { key: "create", icon: "add_circle", tooltip: "Criar publicação" }
 ];
 
 const sidebarItems: SidebarItem[] = [
@@ -35,7 +35,7 @@ const sidebarItems: SidebarItem[] = [
     label: "Página Inicial",
     icon: "home",
     to: "/",
-    section: "Principal",
+    section: "Principal"
   },
   { key: "explore", label: "Explorar", icon: "explore", to: "/explore" },
   {
@@ -43,27 +43,27 @@ const sidebarItems: SidebarItem[] = [
     label: "Notificações",
     icon: "notifications",
     to: "/notifications",
-    badge: 5,
+    badge: 5
   },
   {
     key: "communities",
     label: "Comunidades",
     icon: "diversity_1",
-    to: "/messages",
+    to: "/messages"
   },
   {
     key: "messages",
     label: "Mensagens",
     icon: "chat_bubble",
     to: "/messages",
-    badge: 12,
+    badge: 12
   },
   {
     key: "bookmarks",
     label: "Favoritos",
     icon: "bookmark",
     to: "/bookmarks",
-    section: "Coleções",
+    section: "Coleções"
   },
   { key: "lists", label: "Listas", icon: "list", to: "/lists" },
   { key: "groups", label: "Grupos", icon: "group", to: "/groups" },
@@ -72,14 +72,14 @@ const sidebarItems: SidebarItem[] = [
     label: "Meu Perfil",
     icon: "person",
     to: "/profile",
-    section: "Conta",
+    section: "Conta"
   },
   {
     key: "settings",
     label: "Configurações",
     icon: "settings",
-    to: "/settings",
-  },
+    to: "/settings"
+  }
 ];
 
 function toggleDrawer() {

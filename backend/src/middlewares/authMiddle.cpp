@@ -34,7 +34,7 @@ void AuthMiddleware::SetUser(grpc::ServerContext *context,
 std::pair<grpc::Status, AuthenticatedUser>
 AuthMiddleware::ValidateIdToken(const std::string &id_token) {
 
-  JwtValidator validator;
+  auto &validator = JwtValidator::instance();
   auto user = validator.validateToken(id_token);
 
   if (!user.has_value()) {

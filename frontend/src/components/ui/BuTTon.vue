@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<BuTTonProps>(), {
   external: false,
   disabled: false,
   loading: false,
-  block: false,
+  block: false
 });
 
 defineEmits<{
@@ -56,8 +56,8 @@ defineEmits<{
       {
         'btn--block': block,
         'btn--loading': loading,
-        'btn--icon-only': variant === 'icon',
-      },
+        'btn--icon-only': variant === 'icon'
+      }
     ]"
     @click="$emit('click', $event)"
   >

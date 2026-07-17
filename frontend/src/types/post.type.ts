@@ -9,7 +9,7 @@ export const UserSchema = z.object({
   followersCount: z.number(),
   followingCount: z.number(),
   postsCount: z.number(),
-  createdAt: z.string(),
+  createdAt: z.string()
 });
 
 export const PostSchema = z.object({
@@ -21,7 +21,7 @@ export const PostSchema = z.object({
   likesCount: z.number(),
   commentsCount: z.number(),
   isLikedByMe: z.boolean(),
-  createdAt: z.string(),
+  createdAt: z.string()
 });
 
 export const CommentItemSchema = z.object({
@@ -29,7 +29,7 @@ export const CommentItemSchema = z.object({
   author: UserSchema,
   postId: z.string(),
   content: z.string(),
-  createdAt: z.string(),
+  createdAt: z.string()
 });
 
 export type User = z.infer<typeof UserSchema>;

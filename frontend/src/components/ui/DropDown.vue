@@ -10,13 +10,16 @@ export interface DropDownItem {
   divider?: boolean;
 }
 
-const props = withDefaults(defineProps<{
-  items?: DropDownItem[];
-  placement?: "left" | "right";
-}>(), {
-  items: () => [],
-  placement: "right",
-});
+const props = withDefaults(
+  defineProps<{
+    items?: DropDownItem[];
+    placement?: "left" | "right";
+  }>(),
+  {
+    items: () => [],
+    placement: "right"
+  }
+);
 
 const emit = defineEmits<{
   select: [item: DropDownItem];
@@ -68,22 +71,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="drop-down" :class="`drop-down--${placement}`">
-    <button
-      ref="triggerRef"
-      class="drop-down__trigger"
-      @click="toggle"
-    >
+    <button ref="triggerRef" class="drop-down__trigger" @click="toggle">
       <slot name="trigger">
         <q-icon name="more_vert" size="18px" />
       </slot>
     </button>
 
     <Transition name="drop-down">
-      <div
-        v-if="isOpen"
-        ref="menuRef"
-        class="drop-down__menu"
-      >
+      <div v-if="isOpen" ref="menuRef" class="drop-down__menu">
         <template v-if="$slots.header">
           <div class="drop-down__header">
             <slot name="header" />
@@ -92,21 +87,23 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-for="item in items" :key="item.key">
-          <div
-            v-if="item.divider"
-            class="drop-down__divider"
-          />
+          <div v-if="item.divider" class="drop-down__divider" />
           <button
             v-else
             class="drop-down__item"
             :class="{
               'drop-down__item--danger': item.danger,
-              'drop-down__item--disabled': item.disabled,
+              'drop-down__item--disabled': item.disabled
             }"
             :disabled="item.disabled"
             @click="handleSelect(item)"
           >
-            <q-icon v-if="item.icon" :name="item.icon" size="18px" class="drop-down__item-icon" />
+            <q-icon
+              v-if="item.icon"
+              :name="item.icon"
+              size="18px"
+              class="drop-down__item-icon"
+            />
             <span>{{ item.label }}</span>
           </button>
         </template>

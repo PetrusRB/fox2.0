@@ -15,8 +15,8 @@
   "author": "PetrusRB",
   "type": "module",
   "scripts": {
-    "lint": "oxfmt && oxlint --fix",
-    "lint:check": "oxfmt --check && oxlint",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
     "dev": "quasar dev",
     "build": "quasar build",
     "typecheck": "vue-tsc --noEmit",
@@ -44,7 +44,6 @@
     "@types/google-protobuf": "^3.15.12",
     "@types/node": "^22.19.11",
     "autoprefixer": "^10.4.27",
-    "oxfmt": "^0.x",
     "oxlint": "^1.x",
     "oxlint-tsgolint": "^0.x",
     "protoc-gen-grpc-web": "^1.4.2",

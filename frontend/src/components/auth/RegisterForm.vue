@@ -1,3 +1,4 @@
+<!-- TODO: Este código pode ser reutilizado no futuro, então por isso não irei remover ainda - Pedro. -->
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useAuth } from "@/composables/useAuth";
@@ -140,7 +141,14 @@ async function handleRegister() {
         </span>
       </label>
 
-      <BuTTon type="submit" variant="primary" size="lg" block :loading="isLoading" :disabled="!isFormValid">
+      <BuTTon
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        :loading="isLoading"
+        :disabled="!isFormValid"
+      >
         Criar conta
       </BuTTon>
     </form>
@@ -157,9 +165,7 @@ async function handleRegister() {
 
     <p class="auth-card__footer">
       Já tem uma conta?
-      <BuTTon variant="ghost" @click="emit('switchToLogin')">
-        Entrar
-      </BuTTon>
+      <BuTTon variant="ghost" @click="emit('switchToLogin')"> Entrar </BuTTon>
     </p>
   </div>
 </template>

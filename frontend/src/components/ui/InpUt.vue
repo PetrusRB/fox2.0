@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<InpUtProps>(), {
   error: false,
   errorMessage: "",
   disabled: false,
-  loading: false,
+  loading: false
 });
 
 const emit = defineEmits<{
@@ -69,8 +69,8 @@ function togglePassword() {
       {
         'inputos--active': isFocused,
         'inputos--error': error,
-        'inputos--disabled': disabled,
-      },
+        'inputos--disabled': disabled
+      }
     ]"
   >
     <label v-if="label" class="inputos__label">{{ label }}</label>

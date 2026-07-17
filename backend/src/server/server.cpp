@@ -345,7 +345,7 @@ grpc::Status CrownServer::Login(grpc::ServerContext *context,
 
   response->set_id_token(tokens.first);
   response->set_refresh_token(tokens.second);
-  response->set_expires_in(REFRESH_EXPIRES);
+  response->set_expires_in(ID_ACCESS_TOKEN_EXPIRES_SECONDS);
 
   social::User source;
   source.set_id(user.id);
@@ -385,7 +385,7 @@ grpc::Status CrownServer::RefreshAccessToken(
   }
 
   response->set_id_token(new_id_token);
-  response->set_expires_in(REFRESH_EXPIRES);
+  response->set_expires_in(ID_REFRESH_TOKEN_EXPIRES_SECONDS);
 
   return grpc::Status::OK;
 }
@@ -415,7 +415,8 @@ bool CrownServer::init(uint16_t port, AppContext &app) {
       {"/social.InteractionService/AddComment", 5, std::chrono::seconds(60)},
       {"/social.SocialService/ToggleFollow", 5, std::chrono::seconds(60)},
   };
-  creators.push_back(std::make_unique<Crown::RatelimitInterceptFactory>(routes));
+  creators.push_back(
+      std::make_unique<Crown::RatelimitInterceptFactory>(routes));
 
   builder.experimental().SetInterceptorCreators(std::move(creators));
 

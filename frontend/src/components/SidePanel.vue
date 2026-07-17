@@ -24,7 +24,7 @@ export interface SidebarProps {
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   items: () => [],
-  collapsed: false,
+  collapsed: false
 });
 
 defineEmits<{
@@ -51,7 +51,7 @@ const isTablet = computed(() => $q.screen.md);
     class="sidebar"
     :class="{
       'sidebar--collapsed': collapsed && !isMobile,
-      'sidebar--mobile': isMobile,
+      'sidebar--mobile': isMobile
     }"
   >
     <div class="sidebar__content">
@@ -77,7 +77,7 @@ const isTablet = computed(() => $q.screen.md);
             class="sidebar__item"
             :class="{
               'sidebar__item--active': isActive(item),
-              'sidebar__item--icon-only': collapsed && !isMobile,
+              'sidebar__item--icon-only': collapsed && !isMobile
             }"
             :target="item.external ? '_blank' : undefined"
             :title="item.label"

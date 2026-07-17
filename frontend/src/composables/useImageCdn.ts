@@ -1,23 +1,12 @@
-import { upload as imagekitUpload } from "@imagekit/javascript";
 import { ref } from "vue";
-import { z } from "zod";
 
-const IMAGEKIT_PUBLIC_KEY = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY as string;
 const SIGNATURE_ENDPOINT = import.meta.env
   .VITE_IMAGEKIT_SIGNATURE_ENDPOINT as string;
 
 const SIGNATURE_BASE = SIGNATURE_ENDPOINT.replace(
   /\/api\/imagekit\/signature$/,
-  "",
+  ""
 );
-
-const SignatureSchema = z.object({
-  signature: z.string().min(1),
-  token: z.string().min(1),
-  expire: z.number().positive(),
-});
-
-type CachedSignature = z.infer<typeof SignatureSchema>;
 
 export interface UploadProgress {
   loaded: number;
@@ -36,43 +25,19 @@ export interface UploadResult {
   thumbnailUrl?: string;
 }
 
-const MAX_RETRIES = 3;
-const RETRY_BASE_DELAY_MS = 500;
-
-async function fetchSignatureWithRetry(attempt = 0): Promise<CachedSignature> {
-  const res = await fetch(SIGNATURE_ENDPOINT);
-  if (!res.ok) {
-    if (attempt < MAX_RETRIES) {
-      const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
-      await new Promise((r) => setTimeout(r, delay));
-      return fetchSignatureWithRetry(attempt + 1);
-    }
-    throw new Error(
-      "Falha ao obter assinatura de upload apos varias tentativas",
-    );
-  }
-
-  const data = await res.json();
-  const parsed = SignatureSchema.safeParse(data);
-  if (!parsed.success) {
-    throw new Error("Resposta de assinatura com formato invalido");
-  }
-  return parsed.data;
-}
-
 async function computeFileHash(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function checkExistingImage(
-  hash: string,
+  hash: string
 ): Promise<{ url: string; fileId: string } | null> {
   try {
     const res = await fetch(
-      `${SIGNATURE_BASE}/api/imagekit/check?hash=${encodeURIComponent(hash)}`,
+      `${SIGNATURE_BASE}/api/imagekit/check?hash=${encodeURIComponent(hash)}`
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -86,15 +51,28 @@ async function checkExistingImage(
 async function registerImageHash(
   hash: string,
   url: string,
-  fileId: string,
+  fileId: string
 ): Promise<void> {
   try {
     await fetch(`${SIGNATURE_BASE}/api/imagekit/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hash, url, file_id: fileId }),
+      body: JSON.stringify({ hash, url, file_id: fileId })
     });
   } catch {}
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(",")[1] ?? "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export function useImageCdn() {
@@ -102,24 +80,11 @@ export function useImageCdn() {
   const progress = ref<UploadProgress>({ loaded: 0, total: 0, percent: 0 });
   const error = ref<string | null>(null);
 
-  let cachedSignature: CachedSignature | null = null;
   let abortController: AbortController | null = null;
-
-  function isSignatureValid(sig: CachedSignature): boolean {
-    return Date.now() / 1000 < sig.expire - 120;
-  }
-
-  async function getSignature(): Promise<CachedSignature> {
-    if (cachedSignature && isSignatureValid(cachedSignature)) {
-      return cachedSignature;
-    }
-    cachedSignature = await fetchSignatureWithRetry();
-    return cachedSignature;
-  }
 
   async function upload(
     file: File,
-    options?: { folder?: string; tags?: string[] },
+    options?: { folder?: string; tags?: string[] }
   ): Promise<UploadResult> {
     uploading.value = true;
     error.value = null;
@@ -137,53 +102,72 @@ export function useImageCdn() {
           url: existing.url,
           fileId: existing.fileId,
           filePath: "",
-          name: file.name,
+          name: file.name
         };
       }
 
-      const { signature, token, expire } = await getSignature();
+      progress.value = { loaded: 0, total: file.size, percent: 10 };
+
+      const base64 = await fileToBase64(file);
+
+      if (abortController.signal.aborted) {
+        throw new DOMException("Upload cancelado", "AbortError");
+      }
+
+      progress.value = {
+        loaded: Math.round(file.size * 0.3),
+        total: file.size,
+        percent: 30
+      };
+
       const fileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-      const response = await imagekitUpload({
-        file,
-        fileName,
-        publicKey: IMAGEKIT_PUBLIC_KEY,
-        signature,
-        token,
-        expire,
-        ...(options?.folder ? { folder: options.folder } : {}),
-        ...(options?.tags ? { tags: options.tags } : {}),
-        useUniqueFileName: true,
-        onProgress: (event: ProgressEvent) => {
-          progress.value.loaded = event.loaded;
-          progress.value.total = event.total;
-          progress.value.percent =
-            event.total > 0
-              ? Math.round((event.loaded / event.total) * 100)
-              : 0;
-        },
-        abortSignal: abortController.signal,
+      const body: Record<string, unknown> = {
+        file: base64,
+        fileName
+      };
+      if (options?.folder) body.folder = options.folder;
+      if (options?.tags) body.tags = options.tags;
+
+      const res = await fetch(`${SIGNATURE_BASE}/api/imagekit/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: abortController.signal
       });
 
-      const resultUrl = response.url ?? "";
-      const resultFileId = response.fileId ?? "";
+      progress.value = {
+        loaded: Math.round(file.size * 0.8),
+        total: file.size,
+        percent: 80
+      };
 
-      await registerImageHash(fileHash, resultUrl, resultFileId);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        const msg = errData?.error || `Erro ao enviar arquivo (${res.status})`;
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+
+      progress.value = { loaded: file.size, total: file.size, percent: 100 };
+
+      await registerImageHash(fileHash, data.url, data.fileId);
 
       return {
-        url: resultUrl,
-        fileId: resultFileId,
-        filePath: response.filePath ?? "",
-        name: response.name ?? fileName,
-        ...(response.width != null ? { width: response.width } : {}),
-        ...(response.height != null ? { height: response.height } : {}),
-        ...(response.size != null ? { size: response.size } : {}),
-        ...(response.thumbnailUrl != null
-          ? { thumbnailUrl: response.thumbnailUrl }
-          : {}),
+        url: data.url ?? "",
+        fileId: data.fileId ?? "",
+        filePath: data.filePath ?? "",
+        name: data.name ?? fileName,
+        ...(data.width != null ? { width: data.width } : {}),
+        ...(data.height != null ? { height: data.height } : {}),
+        ...(data.size != null ? { size: data.size } : {}),
+        ...(data.thumbnailUrl != null
+          ? { thumbnailUrl: data.thumbnailUrl }
+          : {})
       };
     } catch (e: any) {
-      if (e?.name === "AbortError" || e?.name === "ImageKitAbortError") {
+      if (e?.name === "AbortError") {
         error.value = "Upload cancelado";
       } else {
         error.value = e?.message || "Erro ao fazer upload";
@@ -212,6 +196,6 @@ export function useImageCdn() {
     error,
     upload,
     abort,
-    reset,
+    reset
   };
 }

@@ -23,13 +23,13 @@ const success = ref(false);
 
 const titleRemaining = computed(() => MAX_TITLE_CHARS - title.value.length);
 const contentRemaining = computed(
-  () => MAX_CONTENT_CHARS - content.value.length,
+  () => MAX_CONTENT_CHARS - content.value.length
 );
 const titlePercent = computed(
-  () => (title.value.length / MAX_TITLE_CHARS) * 100,
+  () => (title.value.length / MAX_TITLE_CHARS) * 100
 );
 const contentPercent = computed(
-  () => (content.value.length / MAX_CONTENT_CHARS) * 100,
+  () => (content.value.length / MAX_CONTENT_CHARS) * 100
 );
 
 const canSubmit = computed(() => {
@@ -65,7 +65,7 @@ async function handleSubmit() {
     await createPost(
       title.value.trim(),
       content.value.trim(),
-      imageUrl.value.trim() || undefined,
+      imageUrl.value.trim() || undefined
     );
     title.value = "";
     content.value = "";
@@ -110,9 +110,14 @@ async function handleSubmit() {
         <div v-if="showImageInput" class="create-post__image-section">
           <FiLeUpload
             v-model="imageUrl"
-            :accept="['image/png', 'image/jpeg', 'image/gif', 'image/webp']"
+            :accept="[
+              'image/png',
+              'image/jpeg',
+              'image/gif',
+              'image/webp',
+              'video/mp4'
+            ]"
             folder="/posts"
-            :max-size="10 * 1024 * 1024"
             @uploaded="onImageUploaded"
             @error="onImageError"
           />

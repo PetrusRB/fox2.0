@@ -8,7 +8,7 @@ import {
   setCookie,
   getCookie,
   deleteCookie,
-  getProfile,
+  getProfile
 } from "./useSocialClient";
 import { parseGrpcError, type AppError } from "./errors";
 import { RpcError } from "@protobuf-ts/runtime-rpc";
@@ -39,7 +39,7 @@ function mapGrpcUser(grpcUser: GrpcUser): User {
     followers: grpcUser.followersCount || 0,
     following: grpcUser.followingCount || 0,
     email: grpcUser.id,
-    avatar: decodeUnicodeEscapes(grpcUser.avatar || "/placeholderpfp.png"),
+    avatar: decodeUnicodeEscapes(grpcUser.avatar || "/placeholderpfp.png")
   };
 }
 
@@ -87,16 +87,19 @@ export function useAuth() {
         user.value = updated;
         saveUser(updated);
       }
+      return true;
     } catch (e) {
       if (!(e instanceof RpcError) || e.code !== "UNAUTHENTICATED") {
-        if (!user.value) return false;
-        return true;
+        return !!user.value;
       }
+
       const ok = await refreshAccessToken();
       if (!ok) {
         user.value = null;
+        clearUser();
         return false;
       }
+
       try {
         const fresh = await getProfile(userId);
         if (fresh.displayName || fresh.username) {
@@ -104,12 +107,13 @@ export function useAuth() {
           user.value = updated;
           saveUser(updated);
         }
+        return true;
       } catch {
-        if (!user.value) return false;
+        user.value = null;
+        clearUser();
+        return false;
       }
     }
-
-    return true;
   }
 
   function initiateGoogleLogin() {
@@ -158,6 +162,6 @@ export function useAuth() {
     initiateGoogleLogin,
     handleOAuthCallback,
     clearError,
-    logout,
+    logout
   };
 }

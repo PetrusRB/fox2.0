@@ -1,5 +1,6 @@
 #pragma once
 #include "../middlewares/authMiddle.h"
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -15,13 +16,20 @@ struct PublicKey {
 
 class JwtValidator {
 public:
-  void fetchGoogleKeys();
-  std::optional<PublicKey> findKey(const std::string &kid);
+  static JwtValidator &instance();
+
   std::optional<AuthenticatedUser> validateToken(const std::string &token);
 
 private:
+  JwtValidator();
+  void fetchGoogleKeys();
+  std::optional<PublicKey> findKey(const std::string &kid);
+  bool needsRefresh() const;
+
   std::vector<PublicKey> keys_;
   std::mutex mutex_;
+  std::chrono::steady_clock::time_point lastFetch_;
+  static constexpr int KEY_TTL_SECONDS = 3600;
 };
 
 } // namespace Crown

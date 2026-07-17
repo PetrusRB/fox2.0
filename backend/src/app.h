@@ -5,12 +5,19 @@
 #include <string>
 
 namespace Crown {
+// --------------------  EXPORTADAS  --------------------
+constexpr int ID_ACCESS_TOKEN_EXPIRES_SECONDS = 3600;
+constexpr int ID_REFRESH_TOKEN_EXPIRES_SECONDS = 604800;
 
+// ------------------------------------------------------
 struct AppConfig {
   std::string supabaseHost;
   std::string supabaseKey;
   std::string imagekitPrivateKey;
   std::string corsOrigin;
+
+  size_t limitImageBytes = 10 * 1024 * 1024; // 10MB
+  size_t limitVideoBytes = 25 * 1024 * 1024; // 25MB
 
   static AppConfig FromEnv() {
     return {

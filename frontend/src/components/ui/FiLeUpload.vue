@@ -1,23 +1,35 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useImageCdn } from "@/composables/useImageCdn";
+import ViDeoPlayer from "./VideoPlayer.vue";
 
 export interface FiLeUploadProps {
   accept?: string[];
   folder?: string;
   tags?: string[];
-  maxSize?: number;
+  maxSizes?: Record<string, number>;
   modelValue?: string;
   disabled?: boolean;
 }
 
+const MB = 1024 * 1024;
+
 const props = withDefaults(defineProps<FiLeUploadProps>(), {
-  accept: () => ["image/png", "image/jpeg", "image/gif", "image/webp"],
+  accept: () => [
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "video/mp4"
+  ],
   folder: "/posts",
   tags: () => [],
-  maxSize: 10 * 1024 * 1024,
+  maxSizes: () => ({
+    "image/*": 10,
+    "video/*": 25
+  }),
   modelValue: "",
-  disabled: false,
+  disabled: false
 });
 
 const emit = defineEmits<{
@@ -33,12 +45,13 @@ const {
   error: uploadError,
   upload,
   abort,
-  reset,
+  reset
 } = useImageCdn();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const isDragOver = ref(false);
 const previewUrl = ref<string | null>(null);
+const previewIsVideo = ref(false);
 const selectedFile = ref<File | null>(null);
 const localError = ref<string | null>(null);
 
@@ -63,25 +76,45 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getMaxSizeBytes(file: File): number {
+  const type = file.type;
+
+  if (props.maxSizes[type] !== undefined) {
+    return props.maxSizes[type] * MB;
+  }
+
+  const major = type.split("/")[0];
+  const wildcard = `${major}/*`;
+  if (props.maxSizes[wildcard] !== undefined) {
+    return props.maxSizes[wildcard] * MB;
+  }
+
+  return 10 * MB;
+}
+
 function validateFile(file: File): string | null {
   if (!props.accept.includes(file.type)) {
     const exts = props.accept
-      .map((t) => t.split("/")[1]?.toUpperCase() || t)
+      .map(t => t.split("/")[1]?.toUpperCase() || t)
       .join(", ");
     return `Tipo de arquivo nao permitido. Aceitos: ${exts}`;
   }
-  if (file.size > props.maxSize) {
-    return `Arquivo muito grande. Maximo: ${formatSize(props.maxSize)}`;
+  const limit = getMaxSizeBytes(file);
+  if (file.size > limit) {
+    return `Arquivo muito grande. Maximo: ${formatSize(limit)}`;
   }
   return null;
 }
 
 function generatePreview(file: File) {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
-  if (file.type.startsWith("image/")) {
+  const isVideo = file.type.startsWith("video/");
+  if (isVideo || file.type.startsWith("image/")) {
     previewUrl.value = URL.createObjectURL(file);
+    previewIsVideo.value = isVideo;
   } else {
     previewUrl.value = null;
+    previewIsVideo.value = false;
   }
 }
 
@@ -134,7 +167,7 @@ async function startUpload() {
   try {
     const result = await upload(selectedFile.value, {
       folder: props.folder,
-      tags: props.tags,
+      tags: props.tags
     });
     emit("update:modelValue", result.url);
     emit("uploaded", result.url);
@@ -153,6 +186,7 @@ function cancelUpload() {
 function removeFile() {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
   previewUrl.value = null;
+  previewIsVideo.value = false;
   selectedFile.value = null;
   localError.value = null;
   reset();
@@ -160,11 +194,11 @@ function removeFile() {
 
 watch(
   () => props.modelValue,
-  (val) => {
+  val => {
     if (!val && selectedFile.value) {
       removeFile();
     }
-  },
+  }
 );
 </script>
 
@@ -183,7 +217,7 @@ watch(
       class="file-upload__dropzone"
       :class="{
         'file-upload__dropzone--active': isDragOver,
-        'file-upload__dropzone--disabled': disabled || uploading,
+        'file-upload__dropzone--disabled': disabled || uploading
       }"
       @click="openFilePicker"
       @drop.prevent="onDrop"
@@ -196,14 +230,19 @@ watch(
       </span>
       <span class="file-upload__hint">
         Formatos aceitos:
-        {{ accept.map((t) => t.split("/")[1]?.toUpperCase() || t).join(", ") }}
+        {{ accept.map(t => t.split("/")[1]?.toUpperCase() || t).join(", ") }}
       </span>
     </div>
 
     <div v-else class="file-upload__preview">
       <div class="file-upload__preview-content">
+        <ViDeoPlayer
+          v-if="previewUrl && previewIsVideo"
+          :src="previewUrl"
+          class="file-upload__preview-video"
+        />
         <img
-          v-if="previewUrl"
+          v-else-if="previewUrl"
           :src="previewUrl"
           class="file-upload__preview-img"
           alt="Preview"
@@ -284,12 +323,12 @@ watch(
       </button>
     </div>
 
-    <Transition name="fade">
-      <div v-if="localError" class="file-upload__error">
-        <q-icon name="error_outline" size="16px" />
-        {{ localError }}
-      </div>
-    </Transition>
+    <!-- <Transition name="fade"> -->
+    <!--   <div v-if="localError" class="file-upload__error"> -->
+    <!--     <q-icon name="error_outline" size="16px" /> -->
+    <!--     {{ localError }} -->
+    <!--   </div> -->
+    <!-- </Transition> -->
   </div>
 </template>
 
@@ -371,6 +410,10 @@ watch(
     max-height: 300px;
     object-fit: cover;
     display: block;
+  }
+
+  &__preview-video {
+    width: 100%;
   }
 
   &__file-info,

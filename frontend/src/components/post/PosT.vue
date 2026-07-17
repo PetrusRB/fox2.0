@@ -2,7 +2,9 @@
 import { computed } from "vue";
 import { Post } from "@/proto/social";
 import DropDown, { type DropDownItem } from "../ui/DropDown.vue";
+import ViDeoPlayer from "../ui/VideoPlayer.vue";
 import { usePostStore } from "@/stores/post-store";
+import { isVideo } from "@/utils/testMidia";
 
 const props = defineProps<{
   post: Post;
@@ -13,7 +15,7 @@ const postStore = usePostStore();
 const menuItems: DropDownItem[] = [
   { key: "copyLink", label: "Copiar link", icon: "link" },
   { key: "divider", label: "", divider: true },
-  { key: "delete", label: "Excluir post", icon: "delete", danger: true },
+  { key: "delete", label: "Excluir post", icon: "delete", danger: true }
 ];
 
 function handleMenuSelect(item: DropDownItem) {
@@ -23,7 +25,7 @@ function handleMenuSelect(item: DropDownItem) {
       break;
     case "copyLink":
       navigator.clipboard.writeText(
-        `${window.location.origin}/post/${props.post.id}`,
+        `${window.location.origin}/post/${props.post.id}`
       );
       break;
   }
@@ -48,7 +50,7 @@ const initials = computed(() => {
   const name = props.post.author?.displayName || "U";
   return name
     .split(" ")
-    .map((n) => n[0])
+    .map(n => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
@@ -85,8 +87,13 @@ const initials = computed(() => {
     <div class="post-card__body">
       <h3 class="post-card__title">{{ post.title }}</h3>
       <p class="post-card__content">{{ post.content }}</p>
+      <ViDeoPlayer
+        v-if="post.imageUrl && isVideo(post.imageUrl)"
+        :src="post.imageUrl"
+        class="post-card__media"
+      />
       <img
-        v-if="post.imageUrl"
+        v-else-if="post.imageUrl"
         :src="post.imageUrl"
         alt="Post image"
         loading="lazy"
@@ -210,6 +217,10 @@ const initials = computed(() => {
     margin-top: 12px;
     max-height: 400px;
     object-fit: cover;
+  }
+
+  &__media {
+    margin-top: 12px;
   }
 
   &__footer {

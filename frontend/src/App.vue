@@ -7,8 +7,14 @@ import MainLayout from "@/layouts/MainLayout.vue";
 
 import { mdiForum } from "@quasar/extras/mdi-v7";
 
-const { isAuthenticated, restoreSession, handleOAuthCallback, isLoading, error, clearError } =
-  useAuth();
+const {
+  isAuthenticated,
+  restoreSession,
+  handleOAuthCallback,
+  isLoading,
+  error,
+  clearError
+} = useAuth();
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search);
@@ -90,9 +96,15 @@ onMounted(async () => {
         <div class="auth-form-wrapper">
           <Transition name="fade" mode="out-in">
             <div v-if="error" class="auth-error" :key="'error'">
-              <q-icon name="error_outline" size="48px" class="auth-error__icon" />
+              <q-icon
+                name="error_outline"
+                size="48px"
+                class="auth-error__icon"
+              />
               <p class="auth-error__message">{{ error.message }}</p>
-              <p v-if="error.details" class="auth-error__details">{{ error.details }}</p>
+              <p v-if="error.details" class="auth-error__details">{{
+                error.details
+              }}</p>
               <BuTTon variant="primary" size="lg" @click="clearError">
                 Tentar novamente
               </BuTTon>

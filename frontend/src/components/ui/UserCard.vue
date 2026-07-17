@@ -9,7 +9,7 @@ export interface UserCardProps {
 
 withDefaults(defineProps<UserCardProps>(), {
   collapsed: false,
-  user: null,
+  user: null
 });
 </script>
 

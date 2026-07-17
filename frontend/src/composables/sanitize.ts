@@ -2,8 +2,7 @@ import { MAX_CONTENT_CHARS, MAX_TITLE_CHARS } from "@/config/config";
 
 const HTML_TAG_RE = /<[^>]*>/g;
 const DANGEROUS_ATTRS_RE = /\bon\w+\s*=/gi;
-const DANGEROUS_SCHEMES_RE =
-  /^\s*(javascript|vbscript|data|file|blob)\s*:/i;
+const DANGEROUS_SCHEMES_RE = /^\s*(javascript|vbscript|data|file|blob)\s*:/i;
 
 export function stripHtml(input: string): string {
   return input.replace(HTML_TAG_RE, "").replace(DANGEROUS_ATTRS_RE, "").trim();
@@ -15,7 +14,7 @@ export function sanitizeString(input: string, max: number): string {
 
 export function decodeUnicodeEscapes(input: string): string {
   return input.replace(/(\\|\/)u([0-9a-fA-F]{4})/g, (_, _prefix, hex) =>
-    String.fromCharCode(parseInt(hex, 16)),
+    String.fromCharCode(parseInt(hex, 16))
   );
 }
 
@@ -31,11 +30,11 @@ export function sanitizeUrl(input: string): string {
 export function sanitizePost(
   title: string,
   content: string,
-  imageUrl?: string,
+  imageUrl?: string
 ) {
   return {
     title: sanitizeString(title, MAX_TITLE_CHARS),
     content: sanitizeString(content, MAX_CONTENT_CHARS),
-    imageUrl: imageUrl ? sanitizeUrl(imageUrl) : "",
+    imageUrl: imageUrl ? sanitizeUrl(imageUrl) : ""
   };
 }

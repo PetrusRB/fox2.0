@@ -108,6 +108,20 @@ static bool verifySignature(const std::string &signed_data,
   return result == 1;
 }
 
+JwtValidator &JwtValidator::instance() {
+  static JwtValidator inst;
+  return inst;
+}
+
+JwtValidator::JwtValidator()
+    : lastFetch_(std::chrono::steady_clock::now() -
+                 std::chrono::seconds(KEY_TTL_SECONDS + 1)) {}
+
+bool JwtValidator::needsRefresh() const {
+  auto elapsed = std::chrono::steady_clock::now() - lastFetch_;
+  return elapsed >= std::chrono::seconds(KEY_TTL_SECONDS);
+}
+
 void JwtValidator::fetchGoogleKeys() {
   httplib::Client req("https://www.googleapis.com");
   auto resposta = req.Get("/oauth2/v3/certs");
@@ -144,6 +158,7 @@ void JwtValidator::fetchGoogleKeys() {
 
     std::lock_guard<std::mutex> lock(mutex_);
     keys_ = std::move(novas_chaves);
+    lastFetch_ = std::chrono::steady_clock::now();
 
     std::cout << "JWKS: " << keys_.size() << " chaves carregadas\n";
 
@@ -153,7 +168,6 @@ void JwtValidator::fetchGoogleKeys() {
 }
 
 std::optional<PublicKey> JwtValidator::findKey(const std::string &kid) {
-  std::lock_guard<std::mutex> lock(mutex_);
   for (const auto &key : keys_) {
     if (key.kid == kid) {
       return key;
@@ -192,9 +206,14 @@ JwtValidator::validateToken(const std::string &token) {
     return std::nullopt;
   }
 
+  if (needsRefresh()) {
+    fetchGoogleKeys();
+  }
+
   auto key = findKey(kid);
   if (!key.has_value()) {
-    std::cerr << "JWT: chave nao encontrada para kid=" << kid << "\n";
+    std::cerr << "JWT: chave nao encontrada para kid=" << kid
+              << " (chaves: " << keys_.size() << ")\n";
     fetchGoogleKeys();
     key = findKey(kid);
     if (!key.has_value()) {

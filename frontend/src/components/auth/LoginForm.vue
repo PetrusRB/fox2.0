@@ -1,3 +1,5 @@
+<!-- TODO: Este código pode ser reutilizado no futuro, então por isso não irei remover ainda - Pedro. -->
+
 <script setup lang="ts">
 import { useAuth } from "@/composables/useAuth";
 import BuTTon from "@/components/ui/BuTTon.vue";
