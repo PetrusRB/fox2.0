@@ -33,6 +33,8 @@ import type { GetPostRequest } from "./social";
 import type { Post } from "./social";
 import type { CreatePostRequest } from "./social";
 import { AuthService } from "./social";
+import type { DeleteUserResult } from "./social";
+import type { DeleteUserRequest } from "./social";
 import type { RefreshAccessTokenRequest } from "./social";
 import type { LoginResult } from "./social";
 import type { LoginRequest } from "./social";
@@ -111,6 +113,10 @@ export interface IAuthServiceClient {
      * @generated from protobuf rpc: RefreshAccessToken
      */
     refreshAccessToken(input: RefreshAccessTokenRequest, options?: RpcOptions): UnaryCall<RefreshAccessTokenRequest, LoginResult>;
+    /**
+     * @generated from protobuf rpc: DeleteUser
+     */
+    deleteUser(input: DeleteUserRequest, options?: RpcOptions): UnaryCall<DeleteUserRequest, DeleteUserResult>;
 }
 /**
  * @generated from protobuf service social.AuthService
@@ -134,6 +140,13 @@ export class AuthServiceClient implements IAuthServiceClient, ServiceInfo {
     refreshAccessToken(input: RefreshAccessTokenRequest, options?: RpcOptions): UnaryCall<RefreshAccessTokenRequest, LoginResult> {
         const method = this.methods[1], opt = this._transport.mergeOptions(options);
         return stackIntercept<RefreshAccessTokenRequest, LoginResult>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: DeleteUser
+     */
+    deleteUser(input: DeleteUserRequest, options?: RpcOptions): UnaryCall<DeleteUserRequest, DeleteUserResult> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<DeleteUserRequest, DeleteUserResult>("unary", this._transport, method, opt, input);
     }
 }
 /**

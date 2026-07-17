@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 
 export interface DropDownItem {
   key: string;
@@ -17,8 +17,8 @@ const props = withDefaults(
   }>(),
   {
     items: () => [],
-    placement: "right"
-  }
+    placement: "right",
+  },
 );
 
 const emit = defineEmits<{
@@ -28,13 +28,22 @@ const emit = defineEmits<{
 const isOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const triggerRef = ref<HTMLElement | null>(null);
+const activeIndex = ref(-1);
+
+const selectableItems = computed(() =>
+  props.items.filter((item) => !item.divider && !item.disabled),
+);
+
+const visibleItems = computed(() => props.items);
 
 function toggle() {
   isOpen.value = !isOpen.value;
+  if (isOpen.value) activeIndex.value = -1;
 }
 
 function close() {
   isOpen.value = false;
+  activeIndex.value = -1;
 }
 
 function handleSelect(item: DropDownItem) {
@@ -55,7 +64,34 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === "Escape") close();
+  if (!isOpen.value) return;
+
+  switch (e.key) {
+    case "Escape":
+      close();
+      break;
+    case "ArrowDown":
+      e.preventDefault();
+      moveActive(1);
+      break;
+    case "ArrowUp":
+      e.preventDefault();
+      moveActive(-1);
+      break;
+    case "Enter":
+      e.preventDefault();
+      if (activeIndex.value >= 0) {
+        handleSelect(selectableItems.value[activeIndex.value]);
+      }
+      break;
+  }
+}
+
+function moveActive(direction: number) {
+  const len = selectableItems.value.length;
+  if (len === 0) return;
+  activeIndex.value =
+    (activeIndex.value + direction + len) % len;
 }
 
 onMounted(() => {
@@ -86,14 +122,15 @@ onBeforeUnmount(() => {
           <div class="drop-down__divider" />
         </template>
 
-        <template v-for="item in items" :key="item.key">
+        <template v-for="item in visibleItems" :key="item.key">
           <div v-if="item.divider" class="drop-down__divider" />
           <button
             v-else
             class="drop-down__item"
             :class="{
               'drop-down__item--danger': item.danger,
-              'drop-down__item--disabled': item.disabled
+              'drop-down__item--disabled': item.disabled,
+              'drop-down__item--active': selectableItems.indexOf(item) === activeIndex,
             }"
             :disabled="item.disabled"
             @click="handleSelect(item)"
@@ -174,6 +211,11 @@ onBeforeUnmount(() => {
     transition: all 0.12s ease;
 
     &:hover {
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    &--active {
       color: var(--text-primary);
       background: var(--bg-primary);
     }

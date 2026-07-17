@@ -4,6 +4,7 @@ import { Post } from "@/proto/social";
 import DropDown, { type DropDownItem } from "../ui/DropDown.vue";
 import ViDeoPlayer from "../ui/VideoPlayer.vue";
 import { usePostStore } from "@/stores/post-store";
+import { useAuth } from "@/composables/useAuth";
 import { isVideo } from "@/utils/testMidia";
 
 const props = defineProps<{
@@ -11,12 +12,29 @@ const props = defineProps<{
 }>();
 
 const postStore = usePostStore();
+const { user } = useAuth();
 
-const menuItems: DropDownItem[] = [
-  { key: "copyLink", label: "Copiar link", icon: "link" },
-  { key: "divider", label: "", divider: true },
-  { key: "delete", label: "Excluir post", icon: "delete", danger: true }
-];
+const isAuthor = computed(
+  () => !!user.value && user.value.id === props.post.author?.id,
+);
+
+const menuItems = computed<DropDownItem[]>(() => {
+  const items: DropDownItem[] = [
+    { key: "copyLink", label: "Copiar link", icon: "link" },
+  ];
+
+  if (isAuthor.value) {
+    items.push({ key: "divider", label: "", divider: true });
+    items.push({
+      key: "delete",
+      label: "Excluir post",
+      icon: "delete",
+      danger: true,
+    });
+  }
+
+  return items;
+});
 
 function handleMenuSelect(item: DropDownItem) {
   switch (item.key) {
@@ -25,7 +43,7 @@ function handleMenuSelect(item: DropDownItem) {
       break;
     case "copyLink":
       navigator.clipboard.writeText(
-        `${window.location.origin}/post/${props.post.id}`
+        `${window.location.origin}/post/${props.post.id}`,
       );
       break;
   }
@@ -50,7 +68,7 @@ const initials = computed(() => {
   const name = props.post.author?.displayName || "U";
   return name
     .split(" ")
-    .map(n => n[0])
+    .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);

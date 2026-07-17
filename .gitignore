@@ -3,6 +3,9 @@
 .env.local
 .env.production
 
+# Extras
+melhorias_atuais.txt
+
 # Dependencies
 node_modules/
 

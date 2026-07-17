@@ -59,22 +59,7 @@ Client::~Client() {}
 void Client::begin(const std::string &hostname_a, const std::string &key_a) {
   hostname = hostname_a;
   key = key_a;
-  url_query_reset();
 }
-
-void Client::check_last_string() {
-  if (!url_query.empty() && url_query.back() != '?') {
-    url_query += "&";
-  }
-}
-
-std::string Client::get_query() {
-  std::string temp = url_query;
-  url_query_reset();
-  return hostname + "/rest/v1/" + temp;
-}
-
-void Client::url_query_reset() { url_query.clear(); }
 
 int Client::login_process() {
   try {
@@ -146,9 +131,8 @@ int Client::login_process() {
   }
 }
 
-QueryBuilder &Client::from(const std::string &table) {
-  url_query += table + "?";
-  return *(new QueryBuilder(this, url_query));
+QueryBuilder Client::from(const std::string &table) {
+  return QueryBuilder(this, table + "?");
 }
 
 int Client::insert(const std::string &table, const std::string &json_data,
@@ -229,14 +213,82 @@ int Client::insert(const std::string &table, const std::string &json_data,
   }
 }
 
-QueryBuilder &Client::select(const std::string &columns) {
-  url_query += "select=" + columns;
-  return *(new QueryBuilder(this, url_query));
-}
+std::string Client::insert_return(const std::string &table,
+                                  const std::string &json_data, bool upsert) {
+  try {
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "https://" + hostname;
+    httplib::Client cli(scheme);
+    cli.enable_server_certificate_verification(false);
+    cli.set_connection_timeout(10, 0);
+    cli.set_read_timeout(30, 0);
+    cli.set_write_timeout(30, 0);
+#else
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "http://" + hostname;
+    httplib::Client cli(scheme);
+#endif
 
-QueryBuilder &Client::update(const std::string &table) {
-  url_query += table + "?";
-  return *(new QueryBuilder(this, url_query));
+    httplib::Headers headers = {{"apikey", key},
+                                {"Content-Type", "application/json"}};
+
+    if (upsert) {
+      headers.emplace("Prefer",
+                      "return=representation,resolution=merge-duplicates");
+    } else {
+      headers.emplace("Prefer", "return=representation");
+    }
+
+    if (use_auth && !user_token.empty()) {
+      unsigned long t_now = current_time_ms();
+      if (t_now - login_time >= auth_timeout) {
+        LOGD("Token expired, refreshing...");
+        login_process();
+      }
+      headers.emplace("Authorization", "Bearer " + user_token);
+      LOGD("insert_return: using user token auth");
+    } else {
+      headers.emplace("Authorization", "Bearer " + key);
+      LOGD("insert_return: using anon key auth");
+    }
+
+    LOGD("insert_return: POST /rest/v1/%s", table.c_str());
+    LOGD("insert_return: body: %s", json_data.c_str());
+
+    auto res =
+        cli.Post("/rest/v1/" + table, headers, json_data, "application/json");
+
+    if (!res) {
+      LOGE("insert_return: no response from server");
+      return "";
+    }
+
+    LOGD("insert_return: status=%d", res->status);
+
+    if (res->status >= 400) {
+      LOGE("insert_return: error %d: %s", res->status, res->body.c_str());
+      return "";
+    }
+
+    if (res->status >= 200 && res->status < 300) {
+      auto parsed = json::parse(res->body, nullptr, false);
+      if (parsed.is_array() && !parsed.empty()) {
+        LOGD("insert_return: success, got %zu items", parsed.size());
+        return parsed[0].dump();
+      }
+      LOGE("insert_return: response not array or empty. body=%.200s",
+           res->body.c_str());
+      return "";
+    }
+
+    return "";
+  } catch (const std::exception &e) {
+    LOGE("insert_return: exception: %s", e.what());
+    return "";
+  }
 }
 
 int Client::upload(const std::string &bucket, const std::string &filename,
@@ -273,24 +325,19 @@ int Client::upload(const std::string &bucket, const std::string &filename,
   }
 }
 
-std::string Client::do_select() {
+std::string Client::do_select(const std::string &url) {
   try {
-// Determine if we should use HTTPS
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-    // Use HTTPS when OpenSSL is available
     std::string scheme = hostname.find("://") != std::string::npos
                              ? hostname
                              : "https://" + hostname;
     httplib::Client cli(scheme);
     cli.enable_server_certificate_verification(true);
-    LOGD("Using HTTPS with SSL verification for select");
 #else
-    // Fall back to HTTP when OpenSSL is not available
     std::string scheme = hostname.find("://") != std::string::npos
                              ? hostname
                              : "http://" + hostname;
     httplib::Client cli(scheme);
-    LOGD("Using HTTP (no SSL support) for select");
 #endif
 
     httplib::Headers headers = {{"apikey", key},
@@ -304,10 +351,21 @@ std::string Client::do_select() {
       headers.emplace("Authorization", "Bearer " + user_token);
     }
 
-    auto res = cli.Get("/rest/v1/" + url_query, headers);
-    url_query_reset();
+    auto res = cli.Get("/rest/v1/" + url, headers);
 
-    if (res && res->status >= 200 && res->status < 300) {
+    if (!res) {
+      LOGE("do_select: no response from server");
+      return "";
+    }
+
+    LOGD("do_select: status=%d", res->status);
+
+    if (res->status >= 400) {
+      LOGE("do_select: error %d: %s", res->status, res->body.c_str());
+      return "";
+    }
+
+    if (res->status >= 200 && res->status < 300) {
       return res->body;
     }
 
@@ -315,12 +373,11 @@ std::string Client::do_select() {
 
   } catch (const std::exception &e) {
     LOGE("Select failed: %s", e.what());
-    url_query_reset();
     return "";
   }
 }
 
-int Client::do_update(const std::string &json_data) {
+int Client::do_update(const std::string &url, const std::string &json_data) {
   try {
 // Determine if we should use HTTPS
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -351,15 +408,50 @@ int Client::do_update(const std::string &json_data) {
       headers.emplace("Authorization", "Bearer " + user_token);
     }
 
-    auto res = cli.Patch("/rest/v1/" + url_query, headers, json_data,
+    auto res = cli.Patch("/rest/v1/" + url, headers, json_data,
                          "application/json");
-    url_query_reset();
 
     return res ? res->status : -100;
 
   } catch (const std::exception &e) {
     LOGE("Update failed: %s", e.what());
-    url_query_reset();
+    return -100;
+  }
+}
+
+int Client::do_delete(const std::string &url) {
+  try {
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "https://" + hostname;
+    httplib::Client cli(scheme);
+    cli.enable_server_certificate_verification(true);
+#else
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "http://" + hostname;
+    httplib::Client cli(scheme);
+#endif
+
+    httplib::Headers headers = {{"apikey", key},
+                                {"Content-Type", "application/json"},
+                                {"Prefer", "return=minimal"}};
+
+    if (use_auth) {
+      unsigned long t_now = current_time_ms();
+      if (t_now - login_time >= auth_timeout) {
+        login_process();
+      }
+      headers.emplace("Authorization", "Bearer " + user_token);
+    }
+
+    auto res = cli.Delete("/rest/v1/" + url, headers);
+
+    return res ? res->status : -100;
+
+  } catch (const std::exception &e) {
+    LOGE("Delete failed: %s", e.what());
     return -100;
   }
 }
@@ -412,117 +504,123 @@ std::string Client::rpc(const std::string &function_name,
 }
 
 // QueryBuilder implementation
-QueryBuilder::QueryBuilder(Client *client, std::string &query)
-    : client(client), url_query(query) {}
+QueryBuilder::QueryBuilder(Client *client, std::string query)
+    : client(client), url_query(std::move(query)) {}
+
+void QueryBuilder::check_last_string() {
+  if (!url_query.empty() && url_query.back() != '?') {
+    url_query += "&";
+  }
+}
 
 QueryBuilder &QueryBuilder::eq(const std::string &column,
                                const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=eq." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::gt(const std::string &column,
                                const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=gt." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::gte(const std::string &column,
                                 const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=gte." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::lt(const std::string &column,
                                const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=lt." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::lte(const std::string &column,
                                 const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=lte." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::neq(const std::string &column,
                                 const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=neq." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::in(const std::string &column,
                                const std::string &values) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=in.(" + values + ")";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::is(const std::string &column,
                                const std::string &value) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=is." + value;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::cs(const std::string &column,
                                const std::string &values) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=cs.{" + values + "}";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::cd(const std::string &column,
                                const std::string &values) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=cd.{" + values + "}";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::ov(const std::string &column,
                                const std::string &values) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=ov.{" + values + "}";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::sl(const std::string &column,
                                const std::string &range) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=sl.(" + range + ")";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::sr(const std::string &column,
                                const std::string &range) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=sr.(" + range + ")";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::nxr(const std::string &column,
                                 const std::string &range) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=nxr.(" + range + ")";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::nxl(const std::string &column,
                                 const std::string &range) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=nxl.(" + range + ")";
   return *this;
 }
 
 QueryBuilder &QueryBuilder::adj(const std::string &column,
                                 const std::string &range) {
-  client->check_last_string();
+  check_last_string();
   url_query += column + "=adj.(" + range + ")";
   return *this;
 }
@@ -530,29 +628,37 @@ QueryBuilder &QueryBuilder::adj(const std::string &column,
 QueryBuilder &QueryBuilder::order(const std::string &column,
                                   const std::string &direction,
                                   bool nulls_first) {
-  client->check_last_string();
+  check_last_string();
   std::string nulls = nulls_first ? "nullsfirst" : "nullslast";
   url_query += "order=" + column + "." + direction + "." + nulls;
   return *this;
 }
 
 QueryBuilder &QueryBuilder::limit(unsigned int count) {
-  client->check_last_string();
+  check_last_string();
   url_query += "limit=" + std::to_string(count);
   return *this;
 }
 
 QueryBuilder &QueryBuilder::offset(int count) {
-  client->check_last_string();
+  check_last_string();
   url_query += "offset=" + std::to_string(count);
   return *this;
 }
 
-std::string QueryBuilder::execute() { return client->do_select(); }
+QueryBuilder &QueryBuilder::select(const std::string &columns) {
+  check_last_string();
+  url_query += "select=" + columns;
+  return *this;
+}
+
+std::string QueryBuilder::execute() { return client->do_select(url_query); }
 
 int QueryBuilder::update_execute(const std::string &json_data) {
-  return client->do_update(json_data);
+  return client->do_update(url_query, json_data);
 }
+
+int QueryBuilder::delete_execute() { return client->do_delete(url_query); }
 
 } // namespace Supabase
 
@@ -592,7 +698,7 @@ int supabase_update(supabase_client_t *client, const char *table,
     return -1;
 
   auto *cpp_client = static_cast<Supabase::Client *>(client->client);
-  auto &builder = cpp_client->update(table);
+  auto builder = cpp_client->from(table);
 
   // Parse simple conditions (this is a basic implementation)
   // For complex conditions, users should use the C++ interface

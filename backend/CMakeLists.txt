@@ -11,6 +11,7 @@ find_package(absl REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
+pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
 find_program(PROTOC_EXECUTABLE protoc REQUIRED)
 find_program(GRPC_CPP_PLUGIN_EXECUTABLE NAMES grpc_cpp_plugin grpc_cpp_plugin.exe REQUIRED)
 
@@ -85,4 +86,5 @@ target_link_libraries(server
     fmt
     PkgConfig::LIBXML2
     bcrypt
+    PkgConfig::SODIUM
   )

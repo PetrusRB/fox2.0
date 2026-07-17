@@ -58,7 +58,6 @@ public:
   bool use_auth;
 
 private:
-  std::string url_query;
   std::string phone_or_email;
   std::string password;
   std::string login_method;
@@ -74,16 +73,13 @@ public:
 
   // Basic setup
   void begin(const std::string &hostname, const std::string &key);
-  std::string get_query();
-  void url_query_reset();
-  void check_last_string();
 
   // Query builder methods
-  QueryBuilder &from(const std::string &table);
+  QueryBuilder from(const std::string &table);
   int insert(const std::string &table, const std::string &json,
              bool upsert = false);
-  QueryBuilder &select(const std::string &columns);
-  QueryBuilder &update(const std::string &table);
+  std::string insert_return(const std::string &table, const std::string &json,
+                            bool upsert = false);
 
   // Upload methods
   int upload(const std::string &bucket, const std::string &filename,
@@ -94,9 +90,10 @@ public:
   std::string rpc(const std::string &function_name,
                   const std::string &json_params = "");
 
-  // Execute operations
-  std::string do_select();
-  int do_update(const std::string &json);
+  // Execute operations (accept URL to avoid shared state)
+  std::string do_select(const std::string &url);
+  int do_update(const std::string &url, const std::string &json);
+  int do_delete(const std::string &url);
 
   // Get auth token for advanced usage
   std::string get_auth_token() const { return user_token; }
@@ -108,10 +105,12 @@ public:
 class QueryBuilder {
 private:
   Client *client;
-  std::string &url_query;
+  std::string url_query;
+
+  void check_last_string();
 
 public:
-  QueryBuilder(Client *client, std::string &query);
+  QueryBuilder(Client *client, std::string query);
 
   // Comparison operators
   QueryBuilder &eq(const std::string &column, const std::string &value);
@@ -138,9 +137,13 @@ public:
   QueryBuilder &limit(unsigned int count);
   QueryBuilder &offset(int count);
 
+  // Column selection (for embedded resources)
+  QueryBuilder &select(const std::string &columns);
+
   // Execute
   std::string execute();
   int update_execute(const std::string &json);
+  int delete_execute();
 
   friend class Client;
 };

@@ -12,6 +12,7 @@ service UserService {
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResult);
   rpc RefreshAccessToken(RefreshAccessTokenRequest) returns (LoginResult);
+  rpc DeleteUser(DeleteUserRequest) returns(DeleteUserResult);
 }
 
 service PostService {
@@ -114,6 +115,9 @@ message NotificationList {
 message LoginRequest {
     string authorization_code = 1;
     string redirect_uri = 2;
+}
+message DeleteUserRequest{
+  string user_id = 1;
 }
 
 message RefreshAccessTokenRequest {
@@ -220,6 +224,10 @@ message ListLikesResult {
 message ToggleFollowResult {
   bool is_following = 1;
   uint32 updated_followers_count = 2;
+}
+message DeleteUserResult {
+  bool success = 1;
+  string deleted_user_id = 2;
 }
 message ToggleLikeResult {
   bool is_liked = 1;

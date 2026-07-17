@@ -123,7 +123,11 @@ bool JwtValidator::needsRefresh() const {
 }
 
 void JwtValidator::fetchGoogleKeys() {
-  httplib::Client req("https://www.googleapis.com");
+  httplib::SSLClient req("www.googleapis.com");
+  req.set_connection_timeout(10);
+  req.set_read_timeout(10);
+  req.enable_server_certificate_verification(false);
+
   auto resposta = req.Get("/oauth2/v3/certs");
 
   if (!resposta) {

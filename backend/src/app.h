@@ -15,17 +15,19 @@ struct AppConfig {
   std::string supabaseKey;
   std::string imagekitPrivateKey;
   std::string corsOrigin;
+  std::string redisUrl;
+  std::string redisToken;
 
   size_t limitImageBytes = 10 * 1024 * 1024; // 10MB
   size_t limitVideoBytes = 25 * 1024 * 1024; // 25MB
 
   static AppConfig FromEnv() {
-    return {
-        GetEnv("DATABASE_HOST"),
-        GetEnv("DATABASE_ANON_KEY"),
-        GetEnv("CDN_IMAGEKIT_PRIVATE"),
-        GetEnv("CORS_ORIGIN", "http://localhost:9000"),
-    };
+    return {GetEnv("DATABASE_HOST"),
+            GetEnv("DATABASE_ANON_KEY"),
+            GetEnv("CDN_IMAGEKIT_PRIVATE"),
+            GetEnv("CORS_ORIGIN", "http://localhost:9000"),
+            GetEnv("UPSTASH_REDIS_REST_URL"),
+            GetEnv("UPSTASH_REDIS_REST_TOKEN")};
   }
 };
 

@@ -57,7 +57,7 @@ Fox 2.0 é uma aplicação full-stack com arquitetura cliente-servidor usando <b
 </tr>
 <tr>
   <td style="padding:10px 16px; color:#fafafa; font-weight:600;">Tooling</td>
-  <td style="padding:10px 16px; color:#d4d4d8;">oxlint, oxfmt, vue-tsc, protoc-gen-grpc-web</td>
+  <td style="padding:10px 16px; color:#d4d4d8;">oxlint, vue-tsc, protoc-gen-grpc-web</td>
 </tr>
 </tbody>
 </table>
