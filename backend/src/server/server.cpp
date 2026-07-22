@@ -132,14 +132,19 @@ bool ParseUser(const json &row, social::User *user) {
   return true;
 }
 
-int CountUserPosts(Supabase::Client &db, const std::string &user_id) {
-  std::string result = db.from("posts")
-                           .select("id")
-                           .eq("author_id", user_id)
-                           .limit(10000)
-                           .execute();
-  auto arr = json::parse(result, nullptr, false);
-  return arr.is_array() ? static_cast<int>(arr.size()) : 0;
+int CountUserPosts(Supabase::Client &db, Crown::CacheManager &cache,
+                   const std::string &user_id) {
+  std::string cache_key = cache.post_count_key(user_id);
+  auto cached = cache.get_json(cache_key);
+  if (cached.is_number()) {
+    return cache.get_int(cache_key, 0);
+  }
+
+  long long total = db.from("posts").eq("author_id", user_id).count();
+  int count = total >= 0 ? static_cast<int>(total) : 0;
+
+  cache.set_json(cache_key, count, Crown::CACHE_TTL_POST_COUNT);
+  return count;
 }
 
 } // namespace
@@ -621,7 +626,8 @@ grpc::Status CrownServer::Login(grpc::ServerContext *context,
     proto_user.set_username(user.name);
     proto_user.set_display_name(user.name);
     proto_user.set_avatar(user.picture);
-    proto_user.set_posts_count(CountUserPosts(app_->db(), user.id));
+    proto_user.set_posts_count(
+        CountUserPosts(app_->db(), Cache::instance(), user.id));
 
     *response->mutable_user() = proto_user;
 

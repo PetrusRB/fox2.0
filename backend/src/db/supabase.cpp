@@ -408,8 +408,8 @@ int Client::do_update(const std::string &url, const std::string &json_data) {
       headers.emplace("Authorization", "Bearer " + user_token);
     }
 
-    auto res = cli.Patch("/rest/v1/" + url, headers, json_data,
-                         "application/json");
+    auto res =
+        cli.Patch("/rest/v1/" + url, headers, json_data, "application/json");
 
     return res ? res->status : -100;
 
@@ -418,7 +418,72 @@ int Client::do_update(const std::string &url, const std::string &json_data) {
     return -100;
   }
 }
+long long Client::do_count(const std::string &url) {
+  try {
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "https://" + hostname;
+    httplib::Client cli(scheme);
+    cli.enable_server_certificate_verification(true);
+#else
+    std::string scheme = hostname.find("://") != std::string::npos
+                             ? hostname
+                             : "http://" + hostname;
+    httplib::Client cli(scheme);
+#endif
+    httplib::Headers headers = {{"apikey", key}, {"Prefer", "count=exact"}};
 
+    if (use_auth) {
+      unsigned long t_now = current_time_ms();
+      if (t_now - login_time >= auth_timeout) {
+        login_process();
+      }
+      headers.emplace("Authorization", "Bearer " + user_token);
+    } else {
+      headers.emplace("Authorization", "Bearer " + key);
+    }
+
+    auto res = cli.Head("/rest/v1/" + url, headers);
+
+    if (!res) {
+      LOGE("do_count: sem resposta vindo do servidor");
+      return -1;
+    }
+
+    if (res->status >= 400) {
+      LOGE("do_count: error %d", res->status);
+      return -1;
+    }
+
+    auto it = res->headers.find("Content-Range");
+    if (it == res->headers.end()) {
+      LOGE("do_count: A header Content-Range esta faltando");
+      return -1;
+    }
+
+    const std::string &cr = it->second;
+    size_t slash = cr.find("/");
+    if (slash == std::string::npos || slash + 1 >= cr.size()) {
+      return -1;
+    }
+
+    std::string total_str = cr.substr(slash + 1);
+    if (total_str == "*") {
+      return -1;
+    }
+
+    try {
+      return std::stoll(total_str);
+    } catch (...) {
+      return -1;
+    }
+
+  } catch (const std::exception &e) {
+    LOGE("Falhou ao tentar CONTAR: %s", e.what());
+    return -1;
+  }
+}
 int Client::do_delete(const std::string &url) {
   try {
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -659,6 +724,8 @@ int QueryBuilder::update_execute(const std::string &json_data) {
 }
 
 int QueryBuilder::delete_execute() { return client->do_delete(url_query); }
+
+long long QueryBuilder::count() { return client->do_count(url_query); }
 
 } // namespace Supabase
 

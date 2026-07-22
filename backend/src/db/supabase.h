@@ -94,6 +94,7 @@ public:
   std::string do_select(const std::string &url);
   int do_update(const std::string &url, const std::string &json);
   int do_delete(const std::string &url);
+  long long do_count(const std::string &url);
 
   // Get auth token for advanced usage
   std::string get_auth_token() const { return user_token; }
@@ -144,6 +145,7 @@ public:
   std::string execute();
   int update_execute(const std::string &json);
   int delete_execute();
+  long long count();
 
   friend class Client;
 };
