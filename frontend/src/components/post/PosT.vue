@@ -6,6 +6,7 @@ import ViDeoPlayer from "../ui/VideoPlayer.vue";
 import { usePostStore } from "@/stores/post-store";
 import { useAuth } from "@/composables/useAuth";
 import { isVideo } from "@/utils/testMidia";
+import { useRouter } from "vue-router";
 
 const props = defineProps<{
   post: Post;
@@ -17,6 +18,8 @@ const { user } = useAuth();
 const isAuthor = computed(
   () => !!user.value && user.value.id === props.post.author?.id,
 );
+
+const router = useRouter();
 
 const menuItems = computed<DropDownItem[]>(() => {
   const items: DropDownItem[] = [
@@ -83,6 +86,7 @@ const initials = computed(() => {
           v-if="post.author?.avatar"
           :src="post.author.avatar"
           :alt="post.author.displayName"
+          @click="router.push(`/@${post.author?.handle}`)"
         />
         <span v-else>{{ initials }}</span>
       </div>

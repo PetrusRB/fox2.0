@@ -3,26 +3,28 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { getUserByHandle, listUserPosts } from "@/composables/useSocialClient";
 import { useAuth } from "@/composables/useAuth";
+import { useProfileData } from "@/composables/useProfileData";
 import PosT from "@/components/post/PosT.vue";
-import type { User, Post } from "@/proto/social";
 
 const route = useRoute();
 const { user: currentUser } = useAuth();
 
-const profile = ref<User | null>(null);
-const posts = ref<Post[]>([]);
-const isLoading = ref(true);
-const isLoadingPosts = ref(true);
-const error = ref<string | null>(null);
-const activeTab = ref<"posts" | "about">("posts");
-
 const handle = computed(() => {
-  const h = route.params.handle as string;
+  const raw = route.params as Record<string, string | string[] | undefined>;
+  const h = Array.isArray(raw.handle) ? raw.handle[0] : raw.handle;
   return h?.replace(/^@/, "") ?? "";
 });
 
+const { profile, posts, isLoading, isLoadingPosts, error } =
+  useProfileData(handle);
+
+const activeTab = ref<"posts" | "about">("posts");
+
 const isOwnProfile = computed(
-  () => !!currentUser.value && !!profile.value && currentUser.value.id === profile.value.id,
+  () =>
+    !!currentUser.value &&
+    !!profile.value &&
+    currentUser.value.id === profile.value.id,
 );
 
 const initials = computed(() => {
@@ -46,48 +48,6 @@ const stats = computed(() => [
   { label: "Seguidores", value: profile.value?.followersCount ?? 0 },
   { label: "Seguindo", value: profile.value?.followingCount ?? 0 },
 ]);
-
-async function loadProfile() {
-  if (!handle.value) return;
-
-  isLoading.value = true;
-  error.value = null;
-  profile.value = null;
-
-  try {
-    profile.value = await getUserByHandle(handle.value);
-  } catch (e: any) {
-    error.value = "Usuário não encontrado";
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-async function loadPosts() {
-  if (!profile.value?.id) return;
-
-  isLoadingPosts.value = true;
-  try {
-    posts.value = await listUserPosts(profile.value.id);
-  } catch {
-    posts.value = [];
-  } finally {
-    isLoadingPosts.value = false;
-  }
-}
-
-onMounted(async () => {
-  await loadProfile();
-  if (profile.value) await loadPosts();
-});
-
-watch(
-  () => route.params.handle,
-  async () => {
-    await loadProfile();
-    if (profile.value) await loadPosts();
-  },
-);
 </script>
 
 <template>
@@ -126,7 +86,9 @@ watch(
                 :src="profile.avatar"
                 :alt="profile.displayName"
               />
-              <span v-else class="profile-header__initials">{{ initials }}</span>
+              <span v-else class="profile-header__initials">{{
+                initials
+              }}</span>
             </div>
 
             <div class="profile-header__info">
@@ -137,8 +99,12 @@ watch(
                   Você
                 </span>
               </div>
-              <span class="profile-header__handle">@{{ profile.handle || profile.username }}</span>
-              <p v-if="profile.bio" class="profile-header__bio">{{ profile.bio }}</p>
+              <span class="profile-header__handle"
+                >@{{ profile.handle || profile.username }}</span
+              >
+              <p v-if="profile.bio" class="profile-header__bio">
+                {{ profile.bio }}
+              </p>
               <span v-if="formattedDate" class="profile-header__date">
                 <q-icon name="calendar_today" size="14px" />
                 Membro desde {{ formattedDate }}
@@ -186,11 +152,7 @@ watch(
           </div>
 
           <template v-else>
-            <PosT
-              v-for="post in posts"
-              :key="post.id"
-              :post="post"
-            />
+            <PosT v-for="post in posts" :key="post.id" :post="post" />
 
             <div v-if="posts.length === 0" class="profile-posts__empty">
               <q-icon name="article" size="48px" />
@@ -206,7 +168,9 @@ watch(
               <q-icon name="person" size="20px" />
               Sobre {{ profile.displayName }}
             </h3>
-            <p v-if="profile.bio" class="profile-about__bio">{{ profile.bio }}</p>
+            <p v-if="profile.bio" class="profile-about__bio">
+              {{ profile.bio }}
+            </p>
             <p v-else class="profile-about__bio profile-about__bio--muted">
               Este usuário ainda não escreveu uma bio.
             </p>
@@ -220,17 +184,23 @@ watch(
             <div class="profile-about__stats">
               <div class="profile-about__stat">
                 <q-icon name="article" size="18px" class="text-accent" />
-                <span class="profile-about__stat-value">{{ profile.postsCount }}</span>
+                <span class="profile-about__stat-value">{{
+                  profile.postsCount
+                }}</span>
                 <span class="profile-about__stat-label">posts</span>
               </div>
               <div class="profile-about__stat">
                 <q-icon name="group" size="18px" class="text-accent" />
-                <span class="profile-about__stat-value">{{ profile.followersCount }}</span>
+                <span class="profile-about__stat-value">{{
+                  profile.followersCount
+                }}</span>
                 <span class="profile-about__stat-label">seguidores</span>
               </div>
               <div class="profile-about__stat">
                 <q-icon name="group_add" size="18px" class="text-accent" />
-                <span class="profile-about__stat-value">{{ profile.followingCount }}</span>
+                <span class="profile-about__stat-value">{{
+                  profile.followingCount
+                }}</span>
                 <span class="profile-about__stat-label">seguindo</span>
               </div>
             </div>
