@@ -261,6 +261,15 @@ export interface GetProfileRequest {
     userId: string;
 }
 /**
+ * @generated from protobuf message social.GetUserByHandleRequest
+ */
+export interface GetUserByHandleRequest {
+    /**
+     * @generated from protobuf field: string handle = 1
+     */
+    handle: string;
+}
+/**
  * @generated from protobuf message social.UpdateProfileRequest
  */
 export interface UpdateProfileRequest {
@@ -1451,6 +1460,53 @@ class GetProfileRequest$Type extends MessageType<GetProfileRequest> {
  * @generated MessageType for protobuf message social.GetProfileRequest
  */
 export const GetProfileRequest = new GetProfileRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetUserByHandleRequest$Type extends MessageType<GetUserByHandleRequest> {
+    constructor() {
+        super("social.GetUserByHandleRequest", [
+            { no: 1, name: "handle", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetUserByHandleRequest>): GetUserByHandleRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.handle = "";
+        if (value !== undefined)
+            reflectionMergePartial<GetUserByHandleRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetUserByHandleRequest): GetUserByHandleRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string handle */ 1:
+                    message.handle = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetUserByHandleRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string handle = 1; */
+        if (message.handle !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.handle);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message social.GetUserByHandleRequest
+ */
+export const GetUserByHandleRequest = new GetUserByHandleRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class UpdateProfileRequest$Type extends MessageType<UpdateProfileRequest> {
     constructor() {
@@ -2828,6 +2884,7 @@ export const Empty = new Empty$Type();
  */
 export const UserService = new ServiceType("social.UserService", [
     { name: "GetProfile", options: {}, I: GetProfileRequest, O: User },
+    { name: "GetUserByHandle", options: {}, I: GetUserByHandleRequest, O: User },
     { name: "UpdateProfile", options: {}, I: UpdateProfileRequest, O: User },
     { name: "SearchUsers", options: {}, I: SearchUsersRequest, O: UserList }
 ]);

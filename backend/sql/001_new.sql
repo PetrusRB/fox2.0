@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts (author_id, created_at D
 CREATE INDEX IF NOT EXISTS idx_likes_post_id ON likes (post_id);
 CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes (user_id);
 
--- RPC: Feed com author embed + is_liked_by_me em 1 chamada
+-- rpc's (importantisimos, muito muito muito mesmo kk)
 CREATE OR REPLACE FUNCTION get_feed(p_user_id text, p_limit int, p_offset int)
 RETURNS SETOF json AS $$
   SELECT json_build_object(
@@ -64,7 +64,6 @@ RETURNS SETOF json AS $$
   LIMIT p_limit OFFSET p_offset;
 $$ LANGUAGE sql;
 
--- RPC: Toggle like atomico em 1 chamada
 CREATE OR REPLACE FUNCTION toggle_like(p_user_id text, p_post_id text)
 RETURNS json AS $$
 DECLARE
@@ -90,7 +89,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- RPC: Posts de um usuario com is_liked_by_me em 1 chamada
 CREATE OR REPLACE FUNCTION get_user_posts(p_user_id text, p_author_id text, p_limit int, p_offset int)
 RETURNS SETOF json AS $$
   SELECT json_build_object(
@@ -119,7 +117,6 @@ RETURNS SETOF json AS $$
   LIMIT p_limit OFFSET p_offset;
 $$ LANGUAGE sql;
 
--- RPC: Post unico com is_liked_by_me em 1 chamada
 CREATE OR REPLACE FUNCTION get_post(p_user_id text, p_post_id text)
 RETURNS json AS $$
   SELECT json_build_object(

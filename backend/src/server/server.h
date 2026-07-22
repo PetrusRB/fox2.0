@@ -52,6 +52,10 @@ public:
                           const social::GetProfileRequest *request,
                           social::User *response) override;
 
+  grpc::Status GetUserByHandle(grpc::ServerContext *context,
+                               const social::GetUserByHandleRequest *request,
+                               social::User *response) override;
+
   grpc::Status ToggleLike(grpc::ServerContext *context,
                           const social::ToggleLikeRequest *request,
                           social::ToggleLikeResult *response) override;

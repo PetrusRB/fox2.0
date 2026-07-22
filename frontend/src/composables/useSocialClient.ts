@@ -4,12 +4,12 @@ import {
   PostServiceClient,
   InteractionServiceClient,
   AuthServiceClient,
-  UserServiceClient
+  UserServiceClient,
 } from "@/proto/social.client";
 import type { Post, CommentItem, ToggleLikeResult, User } from "@/proto/social";
 import { MAX_CONTENT_CHARS } from "@/config/config";
 
-const HOST = import.meta.env.VITE_GRPC_HOST || "http://localhost:8080";
+const HOST = import.meta.env.VITE_GRPC_HOST || "http://localhost:8082";
 
 let transport: GrpcWebFetchTransport | null = null;
 let postClient: PostServiceClient | null = null;
@@ -21,7 +21,7 @@ let userClient: UserServiceClient | null = null;
 function decodeUrl(url: string): string {
   if (!url) return url;
   return url.replace(/(\\|\/)u([0-9a-fA-F]{4})/g, (_, _prefix, hex) =>
-    String.fromCharCode(parseInt(hex, 16))
+    String.fromCharCode(parseInt(hex, 16)),
   );
 }
 const utf8Decoder = new TextDecoder("utf-8");
@@ -47,13 +47,13 @@ function decodePost(post: Post): Post {
   if (decoded.author?.avatar) {
     decoded = {
       ...decoded,
-      author: { ...decoded.author, avatar: decodeUrl(decoded.author.avatar) }
+      author: { ...decoded.author, avatar: decodeUrl(decoded.author.avatar) },
     };
   }
   return {
     ...decoded,
     title: utf8(decoded.title),
-    content: utf8(decoded.content)
+    content: utf8(decoded.content),
   };
 }
 
@@ -77,7 +77,7 @@ function getTransport(): GrpcWebFetchTransport {
   if (!transport) {
     transport = new GrpcWebFetchTransport({
       baseUrl: HOST,
-      fetchInit: { credentials: "include" }
+      fetchInit: { credentials: "include" },
     });
   }
   return transport;
@@ -98,7 +98,7 @@ function createProtectedClient<T extends object>(client: T): T {
       }
       return (...args: unknown[]) =>
         handleUnauthenticated(() => value.apply(target, args));
-    }
+    },
   });
 }
 
@@ -112,7 +112,7 @@ function getPostClient(): PostServiceClient {
 function getInteractionClient(): InteractionServiceClient {
   if (!interactionClient) {
     interactionClient = createProtectedClient(
-      new InteractionServiceClient(getTransport())
+      new InteractionServiceClient(getTransport()),
     );
   }
   return interactionClient;
@@ -135,12 +135,12 @@ function getUserClient(): UserServiceClient {
 // --------------------- Auth ---------------------
 export async function loginWithGoogle(
   authorizationCode: string,
-  redirectUri: string
+  redirectUri: string,
 ) {
   const client = getAuthClient();
   const { response } = await client.login({
     authorizationCode,
-    redirectUri
+    redirectUri,
   });
 
   if (response.idToken) {
@@ -171,7 +171,7 @@ export function getGoogleOAuthUrl(): string {
     response_type: "code",
     scope: "openid email profile",
     access_type: "offline",
-    prompt: "consent"
+    prompt: "consent",
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
@@ -186,7 +186,7 @@ export async function refreshAccessToken(): Promise<boolean> {
   try {
     const client = getAuthClient();
     const { response } = await client.refreshAccessToken({
-      refreshToken
+      refreshToken,
     });
 
     if (response.idToken) {
@@ -235,7 +235,7 @@ async function handleUnauthenticated<T>(fn: () => Promise<T>): Promise<T> {
 export async function createPost(
   title: string,
   content: string,
-  imageUrl?: string
+  imageUrl?: string,
 ): Promise<Post> {
   const { sanitizePost } = await import("./sanitize");
   const { validateCreatePost } = await import("./validators");
@@ -250,7 +250,7 @@ export async function createPost(
   const { response } = await client.createPost({
     title: clean.title,
     content: clean.content,
-    imageUrl: clean.imageUrl
+    imageUrl: clean.imageUrl,
   });
   return response;
 }
@@ -275,7 +275,7 @@ export async function listFeed(page = 1, limit = 20): Promise<Post[]> {
 export async function listUserPosts(
   userId: string,
   page = 1,
-  limit = 20
+  limit = 20,
 ): Promise<Post[]> {
   const client = getPostClient();
   const { response } = await client.listUserPosts({ userId, page, limit });
@@ -284,7 +284,7 @@ export async function listUserPosts(
 
 // --------------------- Interações ---------------------
 export async function toggleLikePost(
-  postId: string
+  postId: string,
 ): Promise<ToggleLikeResult> {
   const client = getInteractionClient();
   const { response } = await client.toggleLike({ postId });
@@ -293,7 +293,7 @@ export async function toggleLikePost(
 
 export async function addComment(
   postId: string,
-  content: string
+  content: string,
 ): Promise<CommentItem> {
   const { sanitizeString } = await import("./sanitize");
   const cleanContent = sanitizeString(content, MAX_CONTENT_CHARS);
@@ -301,7 +301,7 @@ export async function addComment(
   const client = getInteractionClient();
   const { response } = await client.addComment({
     postId,
-    content: cleanContent
+    content: cleanContent,
   });
   return response;
 }
@@ -309,7 +309,7 @@ export async function addComment(
 export async function listComments(
   postId: string,
   page = 1,
-  limit = 20
+  limit = 20,
 ): Promise<CommentItem[]> {
   const client = getInteractionClient();
   const { response } = await client.listComments({ postId, page, limit });
@@ -320,5 +320,11 @@ export async function listComments(
 export async function getProfile(userId: string): Promise<User> {
   const client = getUserClient();
   const { response } = await client.getProfile({ userId });
+  return response;
+}
+
+export async function getUserByHandle(handle: string): Promise<User> {
+  const client = getUserClient();
+  const { response } = await client.getUserByHandle({ handle });
   return response;
 }

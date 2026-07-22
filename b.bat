@@ -18,10 +18,17 @@ set "DEPLOY=%ROOT%deploy"
 
 :: Parse args
 set "MODE=full"
+set "NOBUILD=0"
+:parse_args
+if "%~1"=="" goto :done_args
 if "%~1"=="--direct" set "MODE=direct"
 if "%~1"=="--proxy" set "MODE=proxy"
 if "%~1"=="--prod" set "MODE=prod"
 if "%~1"=="--gen" set "MODE=gen"
+if "%~1"=="--no-build" set "NOBUILD=1"
+shift
+goto :parse_args
+:done_args
 
 if "%MODE%"=="direct" goto :direct
 if "%MODE%"=="proxy" goto :proxy
@@ -89,6 +96,8 @@ if "%MODE%"=="gen" (
     exit /b 0
 )
 
+if "%NOBUILD%"=="1" goto :run
+
 :: 3. CMake
 echo [3/5] Configurando CMake...
 if not exist "%BUILD_DIR%" mkdir "%BUILD_DIR%"
@@ -149,6 +158,8 @@ echo ========================================
 echo    Crown API - Proxy Mode (v1.0)
 echo ========================================
 echo.
+
+if "%NOBUILD%"=="1" goto :proxy_start
 
 :: Check deps
 if not exist "%PROTOC%" (
@@ -227,17 +238,18 @@ echo [OK] Build concluido.
 echo.
 
 :: 5. Start proxy + server
+:proxy_start
 echo [5/5] Iniciando o binario do proxy + server...
 echo.
 
-echo [1/2] Iniciando binario do proxy na porta 8080...
-start "proxios" /min "%GRPCWEBPROXY%" --backend_addr=localhost:50051 --server_http_debug_port=8080 --allow_all_origins --run_tls_server=false
+echo [1/2] Iniciando binario do proxy...
+start "proxios" /min "%GRPCWEBPROXY%" --backend_addr=localhost:50051 --server_http_debug_port=8082 --allow_all_origins --run_tls_server=false
 timeout /t 2 /nobreak >nul
 
 echo [2/2] Iniciando servidor gRPC na porta 50051...
 echo.
 echo ========================================
-echo    Proxy:    http://localhost:8080
+echo    Proxy:    http://localhost:8082
 echo    gRPC:     localhost:50051
 echo ========================================
 echo.

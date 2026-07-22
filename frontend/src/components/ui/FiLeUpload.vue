@@ -172,7 +172,7 @@ async function startUpload() {
     emit("update:modelValue", result.url);
     emit("uploaded", result.url);
   } catch (e: any) {
-    if (e?.name !== "AbortError" && e?.name !== "ImageKitAbortError") {
+    if (e?.name !== "AbortError") {
       const msg = uploadError.value || "Erro ao fazer upload";
       emit("error", msg);
     }

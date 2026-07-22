@@ -1,25 +1,30 @@
 cmake_minimum_required(VERSION 3.14)
 project(server VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ── Dependencies ────────────────────────────────────────
 find_package(gRPC REQUIRED)
 find_package(absl REQUIRED)
+find_package(CURL REQUIRED)
+find_package(curlpp REQUIRED)
+
+find_package(pugixml REQUIRED)
+find_package(xchange REQUIRED)
+find_package(redisx REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(INIH REQUIRED IMPORTED_TARGET INIReader)
 
 find_package(OpenSSL REQUIRED)
-find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBXML2 REQUIRED IMPORTED_TARGET libxml-2.0)
 pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium)
+pkg_check_modules(VIPS REQUIRED vips-cpp)
 find_program(PROTOC_EXECUTABLE protoc REQUIRED)
 find_program(GRPC_CPP_PLUGIN_EXECUTABLE NAMES grpc_cpp_plugin grpc_cpp_plugin.exe REQUIRED)
 
-# ── Proto config ────────────────────────────────────────
 set(PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 file(GLOB PROTO_FILES ${PROTO_DIR}/*.proto)
 
-# ── Generate backend C++ protos ─────────────────────────
 set(GEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/gen)
 set(BACKEND_GEN_SRCS)
 set(BACKEND_GEN_HDRS)
@@ -53,8 +58,9 @@ foreach(PROTO_FILE ${PROTO_FILES})
     list(APPEND BACKEND_GEN_HDRS ${CUR_HDRS})
 endforeach()
 
-# ── Server executable ───────────────────────────────────
 file(GLOB_RECURSE SERVER_SRCS CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE MINIO_SRCS CONFIGURE_DEPENDS src/libs/miniocpp/*.cc)
+list(APPEND SERVER_SRCS ${MINIO_SRCS})
 list(REMOVE_ITEM SERVER_SRCS ${GEN_DIR}/*.cc)
 list(APPEND SERVER_SRCS ${BACKEND_GEN_SRCS})
 
@@ -67,8 +73,9 @@ target_compile_definitions(server PRIVATE _WIN32_WINNT=0x0A00 CPPHTTPLIB_OPENSSL
 target_include_directories(server PRIVATE
     ${GEN_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/libs
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    fmt::fmt
+    ${VIPS_INCLUDE_DIRS}
 )
 
 target_link_libraries(server
@@ -83,8 +90,17 @@ target_link_libraries(server
 
     OpenSSL::SSL
     OpenSSL::Crypto
+    CURL::libcurl
+    curlpp::curlpp
+    pugixml::pugixml
+    PkgConfig::INIH
+    redisx::core
+    xchange::core
+    ws2_32
+    
     fmt
     PkgConfig::LIBXML2
+    ${VIPS_LIBRARIES}
     bcrypt
     PkgConfig::SODIUM
   )

@@ -5,22 +5,25 @@
 #include "../libs/json.hpp"
 #include "../middlewares/authMiddle.h"
 #include "../middlewares/ratelimit.h"
+#include "../utils/logger.h"
 #include "../utils/sanitize.h"
+#include "http_server.h"
 #include <absl/strings/str_format.h>
 #include <absl/time/time.h>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/support/status.h>
 #include <iostream>
 #include <sodium.h>
+#include <thread>
 
 using json = nlohmann::json;
 using Cache = Crown::CacheManager;
 
 namespace {
-Crown::CryptBaby babycrypt;
 template <typename T>
 T json_or(const json &j, const std::string &key, T def = T{}) {
   auto it = j.find(key);
@@ -32,24 +35,36 @@ const std::string POST_SELECT =
     "followers_count,following_count,posts_count,created_at)";
 
 void UpsertUser(Supabase::Client &db, const Crown::AuthenticatedUser &u) {
-  std::string handle = u.name;
-  std::transform(handle.begin(), handle.end(), handle.begin(), ::tolower);
-  std::replace(handle.begin(), handle.end(), ' ', '_');
-
-  json row;
-  row["username"] = u.name;
-  row["handle"] = handle;
-  row["display_name"] = u.name;
-  row["avatar"] = u.picture;
+  if (u.id.empty())
+    return;
 
   std::string check =
       db.from("users").select("id").eq("id", u.id).limit(1).execute();
   auto arr = json::parse(check, nullptr, false);
 
   if (arr.is_array() && !arr.empty()) {
-    db.from("users").eq("id", u.id).update_execute(row.dump());
+    json row;
+    if (!u.name.empty()) {
+      row["username"] = u.name;
+      row["display_name"] = u.name;
+      std::string handle = u.name;
+      std::transform(handle.begin(), handle.end(), handle.begin(), ::tolower);
+      std::replace(handle.begin(), handle.end(), ' ', '_');
+      row["handle"] = handle;
+    }
+    if (!u.picture.empty()) {
+      row["avatar"] = u.picture;
+    }
+    if (!row.empty()) {
+      db.from("users").eq("id", u.id).update_execute(row.dump());
+    }
   } else {
+    json row;
     row["id"] = u.id;
+    row["username"] = u.name;
+    row["handle"] = u.name;
+    row["display_name"] = u.name;
+    row["avatar"] = u.picture;
     db.insert("users", row.dump(), false);
   }
 }
@@ -84,6 +99,23 @@ bool ParsePost(const json &row, social::Post *post) {
     author->set_created_at(json_or<std::string>(a, "created_at"));
   }
 
+  return true;
+}
+
+bool ParseUser(const json &row, social::User *user) {
+  if (!row.contains("id") || row["id"].is_null())
+    return false;
+
+  user->set_id(row["id"].get<std::string>());
+  user->set_username(json_or<std::string>(row, "username"));
+  user->set_handle(json_or<std::string>(row, "handle"));
+  user->set_display_name(json_or<std::string>(row, "display_name"));
+  user->set_avatar(json_or<std::string>(row, "avatar"));
+  user->set_bio(json_or<std::string>(row, "bio"));
+  user->set_followers_count(json_or<uint32_t>(row, "followers_count"));
+  user->set_following_count(json_or<uint32_t>(row, "following_count"));
+  user->set_posts_count(json_or<uint32_t>(row, "posts_count"));
+  user->set_created_at(json_or<std::string>(row, "created_at"));
   return true;
 }
 
@@ -149,7 +181,6 @@ grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
     row["image_url"] = clean_image.empty() ? "" : clean_image;
 
     std::string created = app_->db().insert_return("posts", row.dump(), false);
-
     std::string post_id;
 
     if (!created.empty()) {
@@ -160,30 +191,10 @@ grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
     }
 
     if (post_id.empty()) {
-      std::cerr << "insert_return failed, falling back to insert + select\n";
-      int status = app_->db().insert("posts", row.dump(), false);
-      if (status < 200 || status >= 300) {
-        return grpc::Status(grpc::StatusCode::INTERNAL,
-                            "Falha ao criar post no banco de dados");
-      }
-
-      std::string result = app_->db()
-                               .from("posts")
-                               .select("id")
-                               .eq("author_id", user->id)
-                               .order("created_at", "desc", false)
-                               .limit(1)
-                               .execute();
-
-      auto arr = json::parse(result, nullptr, false);
-      if (arr.is_array() && !arr.empty()) {
-        post_id = json_or<std::string>(arr[0], "id");
-      }
-    }
-
-    if (post_id.empty()) {
       return grpc::Status(grpc::StatusCode::INTERNAL,
-                          "Nao foi possivel obter o ID do post criado");
+                          "Nao foi possivel obter o ID do post criado, então "
+                          "não foi postado o post. Mas não foi falha sua, e "
+                          "sim dos nossos servidores :( ");
     }
 
     std::string result = app_->db()
@@ -201,7 +212,7 @@ grpc::Status CrownServer::CreatePost(grpc::ServerContext *context,
     Cache::instance().invalidate_feed();
     Cache::instance().invalidate_post_count(user->id);
 
-    std::cout << "Post criado: [" << post_id << "] por " << user->name << "\n";
+    loge(absl::StrFormat("Post criado: [%s] por %s", post_id, user->name));
     return grpc::Status::OK;
   } catch (const std::exception &e) {
     std::cerr << "CreatePost exception: " << e.what() << "\n";
@@ -264,7 +275,7 @@ grpc::Status CrownServer::DeletePost(grpc::ServerContext *context,
 
     std::string result = app_->db()
                              .from("posts")
-                             .select("id,author_id")
+                             .select("id,author_id,image_url")
                              .eq("id", request->post_id())
                              .limit(1)
                              .execute();
@@ -280,6 +291,8 @@ grpc::Status CrownServer::DeletePost(grpc::ServerContext *context,
                           "Not authorized to delete this post");
     }
 
+    std::string image_url = json_or<std::string>(arr[0], "image_url");
+
     int del_status =
         app_->db().from("posts").eq("id", request->post_id()).delete_execute();
 
@@ -287,11 +300,31 @@ grpc::Status CrownServer::DeletePost(grpc::ServerContext *context,
       return grpc::Status(grpc::StatusCode::INTERNAL, "Falha ao remover post");
     }
 
+    if (!image_url.empty()) {
+      std::string hash_result = app_->db()
+                                    .from("midia_hashes")
+                                    .select("file_id")
+                                    .eq("url", image_url)
+                                    .limit(1)
+                                    .execute();
+
+      auto hash_arr = json::parse(hash_result, nullptr, false);
+      if (hash_arr.is_array() && !hash_arr.empty()) {
+        std::string file_id = json_or<std::string>(hash_arr[0], "file_id");
+        app_->db().from("midia_hashes").eq("url", image_url).delete_execute();
+
+        if (!file_id.empty()) {
+          S3DeleteAsync(app_->config().cdnBucket, file_id);
+        }
+      }
+    }
+
     Cache::instance().invalidate_post(request->post_id());
     Cache::instance().invalidate_feed();
     Cache::instance().invalidate_user_posts(author_id);
 
-    std::cout << "Post removido: [" << request->post_id() << "]\n";
+    loge(absl::StrFormat("Post removido: [%s]", request->post_id()));
+
     return grpc::Status::OK;
   } catch (const std::exception &e) {
     std::cerr << "DeletePost exception: " << e.what() << "\n";
@@ -424,18 +457,7 @@ grpc::Status CrownServer::GetProfile(grpc::ServerContext *context,
 
     auto cached = cache.get_json(cache_key);
     if (cached.is_object()) {
-      response->set_id(json_or<std::string>(cached, "id"));
-      response->set_username(json_or<std::string>(cached, "username"));
-      response->set_handle(json_or<std::string>(cached, "handle"));
-      response->set_display_name(json_or<std::string>(cached, "display_name"));
-      response->set_avatar(json_or<std::string>(cached, "avatar"));
-      response->set_bio(json_or<std::string>(cached, "bio"));
-      response->set_followers_count(
-          json_or<uint32_t>(cached, "followers_count"));
-      response->set_following_count(
-          json_or<uint32_t>(cached, "following_count"));
-      response->set_posts_count(json_or<uint32_t>(cached, "posts_count"));
-      response->set_created_at(json_or<std::string>(cached, "created_at"));
+      ParseUser(cached, response);
       return grpc::Status::OK;
     }
 
@@ -451,23 +473,59 @@ grpc::Status CrownServer::GetProfile(grpc::ServerContext *context,
       return grpc::Status(grpc::StatusCode::NOT_FOUND, "User not found");
     }
 
-    const auto &u = arr[0];
-    response->set_id(json_or<std::string>(u, "id"));
-    response->set_username(json_or<std::string>(u, "username"));
-    response->set_handle(json_or<std::string>(u, "handle"));
-    response->set_display_name(json_or<std::string>(u, "display_name"));
-    response->set_avatar(json_or<std::string>(u, "avatar"));
-    response->set_bio(json_or<std::string>(u, "bio"));
-    response->set_followers_count(json_or<uint32_t>(u, "followers_count"));
-    response->set_following_count(json_or<uint32_t>(u, "following_count"));
-    response->set_posts_count(json_or<uint32_t>(u, "posts_count"));
-    response->set_created_at(json_or<std::string>(u, "created_at"));
-
-    cache.set_json(cache_key, u, Crown::CACHE_TTL_USER);
+    ParseUser(arr[0], response);
+    cache.set_json(cache_key, arr[0], Crown::CACHE_TTL_USER);
 
     return grpc::Status::OK;
   } catch (const std::exception &e) {
     std::cerr << "GetProfile exception: " << e.what() << "\n";
+    return grpc::Status(grpc::StatusCode::INTERNAL, e.what());
+  }
+}
+
+grpc::Status
+CrownServer::GetUserByHandle(grpc::ServerContext *context,
+                             const social::GetUserByHandleRequest *request,
+                             social::User *response) {
+  try {
+    if (request->handle().empty()) {
+      return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                          "Handle is required");
+    }
+
+    std::string handle = request->handle();
+    if (!handle.empty() && handle[0] == '@') {
+      handle = handle.substr(1);
+    }
+
+    auto &cache = Cache::instance();
+    std::string cache_key = "user_by_handle:" + handle;
+
+    auto cached = cache.get_json(cache_key);
+    if (cached.is_object()) {
+      ParseUser(cached, response);
+      return grpc::Status::OK;
+    }
+
+    std::string result = app_->db()
+                             .from("users")
+                             .select("*")
+                             .eq("handle", handle)
+                             .limit(1)
+                             .execute();
+
+    auto arr = json::parse(result, nullptr, false);
+    if (!arr.is_array() || arr.empty()) {
+      return grpc::Status(grpc::StatusCode::NOT_FOUND,
+                          "User not found for this handle");
+    }
+
+    ParseUser(arr[0], response);
+    cache.set_json(cache_key, arr[0], Crown::CACHE_TTL_USER);
+
+    return grpc::Status::OK;
+  } catch (const std::exception &e) {
+    std::cerr << "GetUserByHandle exception: " << e.what() << "\n";
     return grpc::Status(grpc::StatusCode::INTERNAL, e.what());
   }
 }
@@ -599,9 +657,9 @@ bool CrownServer::init(uint16_t port, AppContext &app) {
 
   if (!app.config().redisUrl.empty()) {
     Cache::instance().init(app.config().redisUrl);
-    std::cout << "Cache Redis conectado\n";
+    loge("Cache Redis conectado!");
   } else {
-    std::cout << "Cache Redis desabilitado (sem URL configurada)\n";
+    loge("Cache Redis desabilitado (sem url configurada)");
   }
 
   std::string server_addr = absl::StrFormat("0.0.0.0:%d", port);
@@ -637,7 +695,7 @@ bool CrownServer::init(uint16_t port, AppContext &app) {
     return false;
   }
 
-  std::cout << "Servidor iniciado em " << server_addr << "\n";
+  loge(absl::StrFormat("Servidor iniciado em %s", server_addr));
   server_->Wait();
   return true;
 }

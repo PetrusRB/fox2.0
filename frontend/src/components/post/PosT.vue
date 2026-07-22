@@ -178,7 +178,17 @@ const initials = computed(() => {
     overflow: hidden;
     font-size: 14px;
     font-weight: 600;
+    border: 1px solid transparent;
 
+    transition:
+      border-color 0.25s ease,
+      transform 0.25s ease;
+
+    cursor: pointer;
+    &:hover {
+      border-color: var(--secondary);
+      transform: scale(1.06);
+    }
     img {
       width: 100%;
       height: 100%;

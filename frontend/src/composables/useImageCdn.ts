@@ -1,12 +1,8 @@
 import { ref } from "vue";
 
-const SIGNATURE_ENDPOINT = import.meta.env
-  .VITE_IMAGEKIT_SIGNATURE_ENDPOINT as string;
+const CDN_ENDPOINT = import.meta.env.VITE_CDN_ENDPOINT as string;
 
-const SIGNATURE_BASE = SIGNATURE_ENDPOINT.replace(
-  /\/api\/imagekit\/signature$/,
-  ""
-);
+const API_BASE = CDN_ENDPOINT.replace(/\/$/, "");
 
 export interface UploadProgress {
   loaded: number;
@@ -37,7 +33,7 @@ async function checkExistingImage(
 ): Promise<{ url: string; fileId: string } | null> {
   try {
     const res = await fetch(
-      `${SIGNATURE_BASE}/api/imagekit/check?hash=${encodeURIComponent(hash)}`
+      `${API_BASE}/api/cdn/check?hash=${encodeURIComponent(hash)}`
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -54,7 +50,7 @@ async function registerImageHash(
   fileId: string
 ): Promise<void> {
   try {
-    await fetch(`${SIGNATURE_BASE}/api/imagekit/register`, {
+    await fetch(`${API_BASE}/api/cdn/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hash, url, file_id: fileId })
@@ -129,7 +125,7 @@ export function useImageCdn() {
       if (options?.folder) body.folder = options.folder;
       if (options?.tags) body.tags = options.tags;
 
-      const res = await fetch(`${SIGNATURE_BASE}/api/imagekit/upload`, {
+      const res = await fetch(`${API_BASE}/api/cdn/upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -157,7 +153,7 @@ export function useImageCdn() {
       return {
         url: data.url ?? "",
         fileId: data.fileId ?? "",
-        filePath: data.filePath ?? "",
+        filePath: "",
         name: data.name ?? fileName,
         ...(data.width != null ? { width: data.width } : {}),
         ...(data.height != null ? { height: data.height } : {}),

@@ -3,7 +3,7 @@
 
 import { defineConfig } from "#q-app";
 
-export default defineConfig(ctx => {
+export default defineConfig((ctx) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -27,7 +27,7 @@ export default defineConfig(ctx => {
       // 'roboto-font-latin-ext', // this or either 'roboto-font', NEVER both!
 
       "roboto-font", // optional, you are not bound to it
-      "material-icons" // optional, you are not bound to it
+      "material-icons", // optional, you are not bound to it
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
@@ -39,7 +39,7 @@ export default defineConfig(ctx => {
 
       typescript: {
         strict: true,
-        vueShim: true
+        vueShim: true,
         // extendTsConfig (tsConfig) {}
       },
 
@@ -57,13 +57,10 @@ export default defineConfig(ctx => {
       // minify: false,
       // distDir
       defineEnv: {
-        VITE_GRPC_HOST: "http://localhost:8080",
+        VITE_GRPC_HOST: "http://localhost:8082",
         VITE_GOOGLE_CLIENT_ID:
           "550172069250-n6dpi2gc3r800ope6v0at1u4bl7afa33.apps.googleusercontent.com",
-        VITE_IMAGEKIT_PUBLIC_KEY: "public_3ODj7S1JtiJQerO1RCJNouFtzik=",
-        VITE_IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/9k3mcoolader",
-        VITE_IMAGEKIT_SIGNATURE_ENDPOINT:
-          "http://localhost:8081/api/imagekit/signature"
+        VITE_CDN_ENDPOINT: "http://localhost:8081",
       },
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},
@@ -82,16 +79,17 @@ export default defineConfig(ctx => {
             ssr: ctx.modeName === "ssr",
 
             // you need to set i18n resource including paths !
-            include: [ctx.appPaths.resolve.app("src/i18n")]
-          }
-        ]
-      ]
+            include: [ctx.appPaths.resolve.app("src/i18n")],
+          },
+        ],
+      ],
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
       // https: true,
-      open: true // opens browser window automatically
+      open: true, // opens browser window automatically
+      port: 8080,
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
@@ -109,7 +107,7 @@ export default defineConfig(ctx => {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: [],
     },
 
     // animations: 'all', // --- includes all animations
@@ -135,7 +133,7 @@ export default defineConfig(ctx => {
       // (gets superseded if process.env.PORT is specified at runtime)
 
       middlewares: [
-        "render" // keep this as last one
+        "render", // keep this as last one
       ],
 
       // extendSSRPackageJson (pkgJson) {},
@@ -146,7 +144,7 @@ export default defineConfig(ctx => {
       // manualStoreHydration: true,
       // manualPostHydrationTrigger: true,
 
-      pwa: false
+      pwa: false,
       // pwaOfflineHtmlFilename: 'offline.html', // do NOT use index.html as name!
 
       // extendSSRGenerateSWOptions (cfg) {},
@@ -155,7 +153,7 @@ export default defineConfig(ctx => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: "GenerateSW" // 'GenerateSW' or 'InjectManifest'
+      workboxMode: "GenerateSW", // 'GenerateSW' or 'InjectManifest'
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
       // extendPWAManifestJson (json) {},
@@ -172,7 +170,7 @@ export default defineConfig(ctx => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-capacitor-apps/configuring-capacitor
     capacitor: {
-      hideSplashscreen: true
+      hideSplashscreen: true,
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/configuring-electron
@@ -203,8 +201,8 @@ export default defineConfig(ctx => {
       builder: {
         // https://www.electron.build/configuration
 
-        appId: "fweb2"
-      }
+        appId: "fweb2",
+      },
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex
@@ -220,7 +218,7 @@ export default defineConfig(ctx => {
        *
        * @example [ 'my-script.ts', 'sub-folder/my-other-script.js' ]
        */
-      extraScripts: []
-    }
+      extraScripts: [],
+    },
   };
 });

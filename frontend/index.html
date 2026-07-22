@@ -11,11 +11,13 @@
       name="viewport"
       content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>"
     />
-    <% 
+    <%
     const grpcUrl = process.env.VITE_GRPC_HOST || 'http://localhost:50051';
     const grpcOrigin = grpcUrl.replace(/\/+$/, ''); 
     const isLocal = /localhost|127\.0\.0\.1/.test(grpcOrigin); 
-    const connectSrc = isLocal ? "connect-src 'self' ws://localhost:* http://localhost:* https://upload.imagekit.io" : "connect-src 'self' " + grpcOrigin + "https://upload.imagekit.io"; 
+    const cdnUrl = process.env.VITE_CDN_ENDPOINT || 'http://localhost:8081';
+    const cdnOrigin = cdnUrl.replace(/\/api\/cdn\/.*$/, '').replace(/\/+$/, '');
+    const connectSrc = isLocal ? "connect-src 'self' ws://localhost:* http://localhost:* " + cdnOrigin : "connect-src 'self' " + grpcOrigin + " " + cdnOrigin; 
     %>
     <meta
       http-equiv="Content-Security-Policy"
@@ -24,7 +26,7 @@
 	  script-src 'self'; 
 	  style-src 'self' 'unsafe-inline'; 
 	  img-src 'self' http: https: blob: data:;
-	  media-src 'self' https://ik.imagekit.io blob: data:;	  
+	  media-src 'self' blob: data: <%= cdnOrigin %>;
 	  <%= connectSrc %>; 
 	  worker-src 'self' blob:;"
     />

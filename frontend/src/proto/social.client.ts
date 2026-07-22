@@ -44,6 +44,7 @@ import { UserService } from "./social";
 import type { UserList } from "./social";
 import type { SearchUsersRequest } from "./social";
 import type { UpdateProfileRequest } from "./social";
+import type { GetUserByHandleRequest } from "./social";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { User } from "./social";
 import type { GetProfileRequest } from "./social";
@@ -59,6 +60,10 @@ export interface IUserServiceClient {
      * @generated from protobuf rpc: GetProfile
      */
     getProfile(input: GetProfileRequest, options?: RpcOptions): UnaryCall<GetProfileRequest, User>;
+    /**
+     * @generated from protobuf rpc: GetUserByHandle
+     */
+    getUserByHandle(input: GetUserByHandleRequest, options?: RpcOptions): UnaryCall<GetUserByHandleRequest, User>;
     /**
      * @generated from protobuf rpc: UpdateProfile
      */
@@ -87,17 +92,24 @@ export class UserServiceClient implements IUserServiceClient, ServiceInfo {
         return stackIntercept<GetProfileRequest, User>("unary", this._transport, method, opt, input);
     }
     /**
+     * @generated from protobuf rpc: GetUserByHandle
+     */
+    getUserByHandle(input: GetUserByHandleRequest, options?: RpcOptions): UnaryCall<GetUserByHandleRequest, User> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetUserByHandleRequest, User>("unary", this._transport, method, opt, input);
+    }
+    /**
      * @generated from protobuf rpc: UpdateProfile
      */
     updateProfile(input: UpdateProfileRequest, options?: RpcOptions): UnaryCall<UpdateProfileRequest, User> {
-        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
         return stackIntercept<UpdateProfileRequest, User>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: SearchUsers
      */
     searchUsers(input: SearchUsersRequest, options?: RpcOptions): UnaryCall<SearchUsersRequest, UserList> {
-        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<SearchUsersRequest, UserList>("unary", this._transport, method, opt, input);
     }
 }

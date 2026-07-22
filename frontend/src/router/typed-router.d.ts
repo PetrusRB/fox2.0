@@ -45,6 +45,13 @@ declare module 'vue-router/auto-routes' {
       { path: ParamValue<false> },
       | never
     >,
+    '//@[handle]': RouteRecordInfo<
+      '//@[handle]',
+      '/@:handle',
+      { handle: ParamValue<true> },
+      { handle: ParamValue<false> },
+      | never
+    >,
   }
 
   /**
@@ -73,6 +80,14 @@ declare module 'vue-router/auto-routes' {
         | never
       pathParamNames:
         | 'path'
+    }
+    'src/pages/index/@[handle].vue': {
+      routes:
+        | '//@[handle]'
+      views:
+        | never
+      pathParamNames:
+        | 'handle'
     }
   }
 

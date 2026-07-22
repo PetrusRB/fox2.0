@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../db/supabase.h"
-#include "../utils/dotenv.h"
+#include "./db/supabase.h"
+#include "./utils/dotenv.h"
 #include <string>
 
 namespace Crown {
@@ -13,10 +13,16 @@ constexpr int ID_REFRESH_TOKEN_EXPIRES_SECONDS = 604800;
 struct AppConfig {
   std::string supabaseHost;
   std::string supabaseKey;
-  std::string imagekitPrivateKey;
   std::string corsOrigin;
   std::string redisUrl;
   std::string redisToken;
+
+  std::string cdnBaseUrl;
+  std::string cdnBucket;
+  std::string cdnAccessKey;
+  std::string cdnSecretKey;
+
+  const std::string serverPrefix = "/";
 
   size_t limitImageBytes = 10 * 1024 * 1024; // 10MB
   size_t limitVideoBytes = 25 * 1024 * 1024; // 25MB
@@ -24,10 +30,13 @@ struct AppConfig {
   static AppConfig FromEnv() {
     return {GetEnv("DATABASE_HOST"),
             GetEnv("DATABASE_ANON_KEY"),
-            GetEnv("CDN_IMAGEKIT_PRIVATE"),
-            GetEnv("CORS_ORIGIN", "http://localhost:9000"),
+            GetEnv("CORS_ORIGIN", "http://localhost:8080"),
             GetEnv("UPSTASH_REDIS_REST_URL"),
-            GetEnv("UPSTASH_REDIS_REST_TOKEN")};
+            GetEnv("UPSTASH_REDIS_REST_TOKEN"),
+            GetEnv("CDN_BASE_URL"),
+            GetEnv("CDN_BUCKET"),
+            GetEnv("CDN_ACCESS_KEY"),
+            GetEnv("CDN_SECRET_KEY")};
   }
 };
 
