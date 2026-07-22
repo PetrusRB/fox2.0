@@ -4,7 +4,7 @@ package social;
 
 // --- SERVICES ---------------------------------------------
 service UserService {
-    rpc GetProfile (GetProfileRequest) returns (User);
+    rpc GetUserById (GetUserByIdRequest) returns (User);
     rpc GetUserByHandle (GetUserByHandleRequest) returns (User);
     rpc UpdateProfile (UpdateProfileRequest) returns (User);
     rpc SearchUsers (SearchUsersRequest) returns (UserList);
@@ -125,7 +125,7 @@ message RefreshAccessTokenRequest {
     string refresh_token = 1;
 }
 
-message GetProfileRequest {
+message GetUserByIdRequest {
     string user_id = 1;
 }
 

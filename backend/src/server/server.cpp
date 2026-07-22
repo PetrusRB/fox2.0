@@ -34,6 +34,13 @@ const std::string POST_SELECT =
     "*,author:users!author_id(id,username,handle,display_name,avatar,bio,"
     "followers_count,following_count,posts_count,created_at)";
 
+std::string sanitize_handle(const std::string &name) {
+  std::string h = name;
+  std::transform(h.begin(), h.end(), h.begin(), ::tolower);
+  std::replace(h.begin(), h.end(), ' ', '_');
+  return h;
+}
+
 void UpsertUser(Supabase::Client &db, const Crown::AuthenticatedUser &u) {
   if (u.id.empty())
     return;
@@ -47,10 +54,7 @@ void UpsertUser(Supabase::Client &db, const Crown::AuthenticatedUser &u) {
     if (!u.name.empty()) {
       row["username"] = u.name;
       row["display_name"] = u.name;
-      std::string handle = u.name;
-      std::transform(handle.begin(), handle.end(), handle.begin(), ::tolower);
-      std::replace(handle.begin(), handle.end(), ' ', '_');
-      row["handle"] = handle;
+      row["handle"] = sanitize_handle(u.name);
     }
     if (!u.picture.empty()) {
       row["avatar"] = u.picture;
@@ -59,10 +63,19 @@ void UpsertUser(Supabase::Client &db, const Crown::AuthenticatedUser &u) {
       db.from("users").eq("id", u.id).update_execute(row.dump());
     }
   } else {
+    std::string handle = sanitize_handle(u.name);
+
+    std::string exists =
+        db.from("users").select("id").eq("handle", handle).limit(1).execute();
+    auto exists_arr = json::parse(exists, nullptr, false);
+    if (exists_arr.is_array() && !exists_arr.empty()) {
+      handle += "_" + Crown::babycrypt.GenerateRandomHex(4);
+    }
+
     json row;
     row["id"] = u.id;
     row["username"] = u.name;
-    row["handle"] = u.name;
+    row["handle"] = handle;
     row["display_name"] = u.name;
     row["avatar"] = u.picture;
     db.insert("users", row.dump(), false);
@@ -443,9 +456,9 @@ CrownServer::ListUserPosts(grpc::ServerContext *context,
   }
 }
 
-grpc::Status CrownServer::GetProfile(grpc::ServerContext *context,
-                                     const social::GetProfileRequest *request,
-                                     social::User *response) {
+grpc::Status CrownServer::GetUserById(grpc::ServerContext *context,
+                                      const social::GetUserByIdRequest *request,
+                                      social::User *response) {
   try {
     if (request->user_id().empty()) {
       return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
@@ -499,7 +512,7 @@ CrownServer::GetUserByHandle(grpc::ServerContext *context,
     }
 
     auto &cache = Cache::instance();
-    std::string cache_key = "user_by_handle:" + handle;
+    std::string cache_key = cache.handle_key(handle);
 
     auto cached = cache.get_json(cache_key);
     if (cached.is_object()) {

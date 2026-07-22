@@ -48,9 +48,9 @@ public:
                      const social::RefreshAccessTokenRequest *request,
                      social::LoginResult *response) override;
 
-  grpc::Status GetProfile(grpc::ServerContext *context,
-                          const social::GetProfileRequest *request,
-                          social::User *response) override;
+  grpc::Status GetUserById(grpc::ServerContext *context,
+                           const social::GetUserByIdRequest *request,
+                           social::User *response) override;
 
   grpc::Status GetUserByHandle(grpc::ServerContext *context,
                                const social::GetUserByHandleRequest *request,

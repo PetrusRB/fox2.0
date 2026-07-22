@@ -11,7 +11,6 @@
 #include <absl/strings/str_format.h>
 #include <algorithm>
 #include <atomic>
-#include <bcrypt.h>
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
@@ -31,11 +30,6 @@ namespace Crown {
 
 inline CryptBaby babycrypt;
 inline std::mutex g_babycryptMutex;
-
-inline bool SecureRandomBytes(uint8_t *buf, size_t len) {
-  return BCRYPT_SUCCESS(BCryptGenRandom(nullptr, buf, static_cast<ULONG>(len),
-                                        BCRYPT_USE_SYSTEM_PREFERRED_RNG));
-}
 
 inline std::string SafeBase64Decode(const std::string &input) {
   std::lock_guard<std::mutex> lock(g_babycryptMutex);
@@ -114,20 +108,6 @@ inline std::string GetMediaTypeLabel(const std::string &ext) {
 inline std::string GetContentType(const std::string &ext) {
   auto *info = LookupMedia(ext);
   return info ? info->contentType : "application/octet-stream";
-}
-
-inline std::string GenerateRandomHex(size_t len) {
-  uint8_t buf[32];
-  if (!SecureRandomBytes(buf, len > 32 ? 32 : len))
-    return "";
-  static constexpr char hex[] = "0123456789abcdef";
-  std::string result;
-  result.reserve(len * 2);
-  for (size_t i = 0; i < len && i < 32; ++i) {
-    result += hex[buf[i] >> 4];
-    result += hex[buf[i] & 0x0F];
-  }
-  return result;
 }
 
 // Reutilizavel em qualquer situação onde precisa do aws s3.
@@ -491,7 +471,7 @@ private:
         }
 
         std::string objectKey =
-            folder + "/" + GenerateRandomHex(16) + "." + finalExt;
+            folder + "/" + babycrypt.GenerateRandomHex(16) + "." + finalExt;
         std::string contentType = GetContentType(finalExt);
 
         std::cerr << "[CDN] S3PutObject start, bucket=" << bucket

@@ -182,6 +182,9 @@ public:
 
   std::string post_key(const std::string &id) { return "post:" + id; }
   std::string user_key(const std::string &id) { return "user:" + id; }
+  std::string handle_key(const std::string &handle) {
+    return "handleuser:" + handle;
+  }
   std::string feed_key(int page, int limit) {
     return "feed:" + std::to_string(page) + ":" + std::to_string(limit);
   }

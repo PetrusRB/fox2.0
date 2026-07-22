@@ -25,6 +25,20 @@ std::string CryptBaby::generateSecId() {
 
   return id;
 }
+std::string CryptBaby::GenerateRandomHex(size_t len) {
+
+  static constexpr char hex[] = "0123456789abcdef";
+  std::string result;
+  result.reserve(len * 2);
+
+  for (size_t i = 0; i < len; i++) {
+    unsigned char b;
+    randombytes_buf(&b, sizeof(b));
+    result.push_back(hex[b >> 4]);
+    result.push_back(hex[b & 0x0F]);
+  }
+  return result;
+}
 std::string CryptBaby::Base64Decode(const std::string &input) {
   static const unsigned char lookup[256] = {
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,

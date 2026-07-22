@@ -252,9 +252,9 @@ export interface RefreshAccessTokenRequest {
     refreshToken: string;
 }
 /**
- * @generated from protobuf message social.GetProfileRequest
+ * @generated from protobuf message social.GetUserByIdRequest
  */
-export interface GetProfileRequest {
+export interface GetUserByIdRequest {
     /**
      * @generated from protobuf field: string user_id = 1
      */
@@ -1414,20 +1414,20 @@ class RefreshAccessTokenRequest$Type extends MessageType<RefreshAccessTokenReque
  */
 export const RefreshAccessTokenRequest = new RefreshAccessTokenRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GetProfileRequest$Type extends MessageType<GetProfileRequest> {
+class GetUserByIdRequest$Type extends MessageType<GetUserByIdRequest> {
     constructor() {
-        super("social.GetProfileRequest", [
+        super("social.GetUserByIdRequest", [
             { no: 1, name: "user_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<GetProfileRequest>): GetProfileRequest {
+    create(value?: PartialMessage<GetUserByIdRequest>): GetUserByIdRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.userId = "";
         if (value !== undefined)
-            reflectionMergePartial<GetProfileRequest>(this, message, value);
+            reflectionMergePartial<GetUserByIdRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetProfileRequest): GetProfileRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetUserByIdRequest): GetUserByIdRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -1446,7 +1446,7 @@ class GetProfileRequest$Type extends MessageType<GetProfileRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: GetProfileRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: GetUserByIdRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string user_id = 1; */
         if (message.userId !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.userId);
@@ -1457,9 +1457,9 @@ class GetProfileRequest$Type extends MessageType<GetProfileRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message social.GetProfileRequest
+ * @generated MessageType for protobuf message social.GetUserByIdRequest
  */
-export const GetProfileRequest = new GetProfileRequest$Type();
+export const GetUserByIdRequest = new GetUserByIdRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GetUserByHandleRequest$Type extends MessageType<GetUserByHandleRequest> {
     constructor() {
@@ -2883,7 +2883,7 @@ export const Empty = new Empty$Type();
  * @generated ServiceType for protobuf service social.UserService
  */
 export const UserService = new ServiceType("social.UserService", [
-    { name: "GetProfile", options: {}, I: GetProfileRequest, O: User },
+    { name: "GetUserById", options: {}, I: GetUserByIdRequest, O: User },
     { name: "GetUserByHandle", options: {}, I: GetUserByHandleRequest, O: User },
     { name: "UpdateProfile", options: {}, I: UpdateProfileRequest, O: User },
     { name: "SearchUsers", options: {}, I: SearchUsersRequest, O: UserList }

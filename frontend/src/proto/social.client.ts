@@ -47,7 +47,7 @@ import type { UpdateProfileRequest } from "./social";
 import type { GetUserByHandleRequest } from "./social";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { User } from "./social";
-import type { GetProfileRequest } from "./social";
+import type { GetUserByIdRequest } from "./social";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
@@ -57,9 +57,9 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface IUserServiceClient {
     /**
-     * @generated from protobuf rpc: GetProfile
+     * @generated from protobuf rpc: GetUserById
      */
-    getProfile(input: GetProfileRequest, options?: RpcOptions): UnaryCall<GetProfileRequest, User>;
+    getUserById(input: GetUserByIdRequest, options?: RpcOptions): UnaryCall<GetUserByIdRequest, User>;
     /**
      * @generated from protobuf rpc: GetUserByHandle
      */
@@ -85,11 +85,11 @@ export class UserServiceClient implements IUserServiceClient, ServiceInfo {
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * @generated from protobuf rpc: GetProfile
+     * @generated from protobuf rpc: GetUserById
      */
-    getProfile(input: GetProfileRequest, options?: RpcOptions): UnaryCall<GetProfileRequest, User> {
+    getUserById(input: GetUserByIdRequest, options?: RpcOptions): UnaryCall<GetUserByIdRequest, User> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GetProfileRequest, User>("unary", this._transport, method, opt, input);
+        return stackIntercept<GetUserByIdRequest, User>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: GetUserByHandle
